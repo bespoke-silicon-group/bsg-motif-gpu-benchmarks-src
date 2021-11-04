@@ -13,5 +13,5 @@ LIBS = $(CUDA_LIBS)
 #-gencode=arch=compute_52,code=sm_52 -gencode=arch=compute_52,code=compute_52
 
 all: 
-	nvcc -O3 -m64 -gencode=arch=compute_52,code=sm_52 -gencode=arch=compute_52,code=compute_52 main.cu -o spgemm $(INCLUDES) $(LIBS) -g
+	nvcc -O3 -m64 -gencode=arch=compute_52,code=sm_52 -gencode=arch=compute_52,code=compute_52 main.cu -o spgemm $(INCLUDES) $(LIBS)
 
