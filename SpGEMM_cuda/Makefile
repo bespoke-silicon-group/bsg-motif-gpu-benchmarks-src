@@ -2,7 +2,7 @@
 CC=nvcc
 
 #includes
-CUDA_INSTALL_PATH = /usr/local/cuda
+CUDA_INSTALL_PATH = /usr/local/cuda-11.0
 INCLUDES = -I$(CUDA_INSTALL_PATH)/include -I$(CUDA_INSTALL_PATH)/samples/common/inc
 
 #libs
@@ -13,5 +13,5 @@ LIBS = $(CUDA_LIBS)
 #-gencode=arch=compute_52,code=sm_52 -gencode=arch=compute_52,code=compute_52
 
 all: 
-	nvcc -O3 -m64 -gencode=arch=compute_52,code=sm_52 -gencode=arch=compute_52,code=compute_52 main.cu -o spgemm $(INCLUDES) $(LIBS)
+	nvcc -O3 -m64 -gencode=arch=compute_52,code=sm_52 -gencode=arch=compute_52,code=compute_52 main.cu --cudart shared -o spgemm $(INCLUDES) $(LIBS)
 
