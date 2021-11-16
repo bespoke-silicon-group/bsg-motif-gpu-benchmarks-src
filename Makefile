@@ -4,7 +4,7 @@ CUDA_PATH ?= /usr/local/cuda
 
 .PHONY: all clean 
 
-all: ${BINARIES} #Jacobi SW    HE BH DMR
+all: ${BINARIES} #Jacobi  HE BH DMR
 
 ./${BIN}:
 	mkdir -p ${BIN}
@@ -38,7 +38,7 @@ ${BIN}/fft: | ./${BIN}
 	$(MAKE); \
 	cp fft ../${BIN}/fft
 	
-${BIN}/spgemm: | ./${BIN}
+${BIN}/spgemm: ${CUDA_PATH}/include/cusp | ./${BIN}
 	cd SpGEMM_cuda;\
 	$(MAKE); \
 	cp spgemm ../${BIN}/spgemm
@@ -63,6 +63,9 @@ ${BIN}/sw: | ./${BIN}
 	cmake CMAKE_BUILD_TYPE=Release ..; \
 	$(MAKE); \
 	cp ./program_gpu ../${BIN}/sw
+
+${CUDA_PATH}/include/cusp: cusp/
+	cp -r ./cusp ${CUDA_PATH}/include/
 
 	
 clean: 
