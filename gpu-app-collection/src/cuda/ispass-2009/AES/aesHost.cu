@@ -36,16 +36,16 @@
 #include "sbox_E.h"
 #include "sbox_D.h"
 #include <aesEncrypt128_kernel.h>
-#include <aesDecrypt128_kernel.h>
-#include <aesEncrypt256_kernel.h>
-#include <aesDecrypt256_kernel.h>
+//#include <aesDecrypt128_kernel.h>
+//#include <aesEncrypt256_kernel.h>
+//#include <aesDecrypt256_kernel.h>
 
-extern "C" void aesEncryptHandler128(unsigned *d_Result, unsigned *d_Input, int inputSize) {
+extern "C" void aesEncryptHandler128(unsigned *d_Result, unsigned *d_Input, unsigned *d_key, int inputSize) {
 
 	dim3  threads(BSIZE, 1);
     dim3  grid((inputSize/BSIZE)/4, 1);
 
-	aesEncrypt128<<< grid, threads >>>( d_Result, d_Input, inputSize);
+	aesEncrypt128<<< grid, threads >>>( d_Result, d_Input, d_key, inputSize);
     CUDA_SAFE_CALL( cudaThreadSynchronize() );
 }
 
@@ -54,7 +54,7 @@ extern "C" void aesDecryptHandler128(unsigned *d_Result, unsigned *d_Input, int 
 	dim3  threads(BSIZE, 1);
     dim3  grid((inputSize/BSIZE)/4, 1);
 
-	aesDecrypt128<<< grid, threads >>>( d_Result, d_Input, inputSize);
+	//aesDecrypt128<<< grid, threads >>>( d_Result, d_Input, inputSize);
     CUDA_SAFE_CALL( cudaThreadSynchronize() );
 }
 
@@ -63,7 +63,7 @@ extern "C" void aesEncryptHandler256(unsigned *d_Result, unsigned *d_Input, int 
 	dim3  threads(BSIZE, 1);
     dim3  grid((inputSize/BSIZE)/4, 1);
 
-	aesEncrypt256<<< grid, threads >>>( d_Result, d_Input, inputSize);
+	//aesEncrypt256<<< grid, threads >>>( d_Result, d_Input, inputSize);
     CUDA_SAFE_CALL( cudaThreadSynchronize() );
 }
 
@@ -72,7 +72,7 @@ extern "C" void aesDecryptHandler256(unsigned *d_Result, unsigned *d_Input, int 
 	dim3  threads(BSIZE, 1);
     dim3  grid((inputSize/BSIZE)/4, 1);
 
-	aesDecrypt256<<< grid, threads >>>( d_Result, d_Input, inputSize);
+	//aesDecrypt256<<< grid, threads >>>( d_Result, d_Input, inputSize);
     CUDA_SAFE_CALL( cudaThreadSynchronize() );
 }
 
@@ -126,7 +126,7 @@ extern "C" int aesHost(unsigned char* result, const unsigned char* inData, int i
     CUDA_SAFE_CALL( cudaMemcpy(d_Key, key, keySize, cudaMemcpyHostToDevice) );
 
 	//texture
-	cudaChannelFormatDesc chDesc;
+	/*cudaChannelFormatDesc chDesc;
 	chDesc.x = 32;
 	chDesc.y = 0;
 	chDesc.z = 0;
@@ -140,7 +140,7 @@ extern "C" int aesHost(unsigned char* result, const unsigned char* inData, int i
 	CUDA_SAFE_CALL( cudaBindTexture( 0, &texEKey128, d_Key, &chDesc, (size_t)keySize) );
 	CUDA_SAFE_CALL( cudaBindTexture( 0, &texDKey128, d_Key, &chDesc, (size_t)keySize) );
 	CUDA_SAFE_CALL( cudaBindTexture( 0, &texEKey, d_Key, &chDesc, (size_t)keySize) );
-	CUDA_SAFE_CALL( cudaBindTexture( 0, &texDKey, d_Key, &chDesc, (size_t)keySize) );
+	CUDA_SAFE_CALL( cudaBindTexture( 0, &texDKey, d_Key, &chDesc, (size_t)keySize) );*/
 
     // allocate device memory for result
     unsigned int size_Result = inputSize;
@@ -162,7 +162,7 @@ extern "C" int aesHost(unsigned char* result, const unsigned char* inData, int i
 	} else {
 		printf("\nENCRYPTION.....\n\n");
 		if (keySize != 240)
-			aesEncryptHandler128( d_Result, d_Input, inputSize);
+			aesEncryptHandler128( d_Result, d_Input, d_Key, inputSize);
 		else
 			aesEncryptHandler256( d_Result, d_Input, inputSize);
 	}

@@ -47,7 +47,7 @@
 
 #define INVSBOX(index)		CUT_BANK_CHECKER( invSBoxBlock, index )
 
-texture<unsigned, 1, cudaReadModeElementType> texDKey128;
+//texture<unsigned, 1, cudaReadModeElementType> texDKey128;
 
 __global__ void aesDecrypt128( unsigned * result, unsigned * inData, int inputSize)
 {
