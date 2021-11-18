@@ -44,25 +44,25 @@ ${BIN}/spgemm: ${CUDA_PATH}/include/cusp | ./${BIN}
 	cp spgemm ../${BIN}/spgemm
 	
 ${BIN}/sgemm: | ./${BIN}
-	cd gpu-app-collection/src/cuda/cutlass-bench; \
-	export CUDACXX=${CUDA_PATH}/bin/nvcc; \
-	mkdir -p build && cd build; \
-	cmake .. -DUSE_GPGPUSIM=1 -DCUTLASS_NVCC_ARCHS=70 && make cutlass_perf_test; \
-	cd tools/test/perf && ln -s ../../../../binary.sh .; ./binary.sh; \
-	cp cutlass_perf_test ../../../../../${BIN}/sgemm;
+	cd cutlass; \
+	nvcc cutlass.cu -I include/ -I tools/util/include/ -cudart=shared -lcudart; \
+	cp a.out ../${BIN}/sgemm;
 
 ${BIN}/aes: | ./${BIN}
 	cd gpu-app-collection/src/cuda/ispass-2009/AES/; \
 	make; \
-	cp ../../bin/linux/release/ispass-2009-AES ../../../../../${BIN}/
+	cp ../../bin/linux/release/ispass-2009-AES ../../../../../${BIN}/aes
 
 ${BIN}/sw: | ./${BIN}
-	cd GPU-BSW/; \
-	mkdir -p build; \ 
-	cd build; \
-	cmake CMAKE_BUILD_TYPE=Release ..; \
-	$(MAKE); \
+	cd GPU-BSW; \
+	nvcc -x cu src/driver.cpp evaluation/main.cpp submodules/alignment_boilerplate/src/* -arch=sm_70 -I include/ -I ./submodules/alignment_boilerplate/include/ -cudart=shared -lcudart -lpthread -o program_gpu; \
 	cp ./program_gpu ../${BIN}/sw
+	
+	#mkdir -p build; \
+	#cd build; \
+	#pwd; \
+	#cmake CMAKE_BUILD_TYPE=Release ..; \
+	#$(MAKE); \
 
 ${CUDA_PATH}/include/cusp: cusp/
 	cp -r ./cusp ${CUDA_PATH}/include/
