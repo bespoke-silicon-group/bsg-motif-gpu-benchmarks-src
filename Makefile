@@ -2,7 +2,7 @@ BIN       ?= ./bin
 BINARIES  ?= ${BIN}/bfs ${BIN}/sssp ${BIN}/pr ${BIN}/bs ${BIN}/fft ${BIN}/spgemm ${BIN}/sgemm ${BIN}/aes
 CUDA_PATH ?= /usr/local/cuda
 
-.PHONY: all clean 
+.PHONY: all clean ${BINARIES}
 
 all: ${BINARIES} #Jacobi  HE BH DMR
 
@@ -54,8 +54,8 @@ ${BIN}/aes: | ./${BIN}
 	cp ../../bin/linux/release/ispass-2009-AES ../../../../../${BIN}/aes
 
 ${BIN}/sw: | ./${BIN}
-	cd GPU-BSW; \
-	nvcc -x cu src/driver.cpp evaluation/main.cpp submodules/alignment_boilerplate/src/* -arch=sm_70 -I include/ -I ./submodules/alignment_boilerplate/include/ -cudart=shared -lcudart -lpthread -o program_gpu; \
+	cd GASAL2; \
+	nvcc src/*.cpp src/*.cu test_prog/*.cpp submodules/alignment_boilerplate/src/* -I include/ -I submodules/alignment_boilerplate/include -I src/ -cudart=shared -lcudart -DN_CODE=0x4E -DMAX_QUERY_LEN=1024 -lpthread -Xcompiler -fopenmp -o program_gpu; \
 	cp ./program_gpu ../${BIN}/sw
 	
 	#mkdir -p build; \
