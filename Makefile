@@ -1,6 +1,7 @@
 BIN       ?= ./bin
 BINARIES  ?= ${BIN}/bfs ${BIN}/sssp ${BIN}/pr ${BIN}/bs ${BIN}/fft ${BIN}/spgemm ${BIN}/sgemm ${BIN}/aes
-CUDA_PATH ?= /usr/local/cuda
+CUDA_PATH ?= /usr/local/cuda-11/
+NVCC      ?= ${CUDA_PATH}/bin/nvcc
 
 .PHONY: all clean ${BINARIES}
 
@@ -45,7 +46,7 @@ ${BIN}/spgemm: ${CUDA_PATH}/include/cusp | ./${BIN}
 	
 ${BIN}/sgemm: | ./${BIN}
 	cd cutlass; \
-	nvcc cutlass.cu -I include/ -I tools/util/include/ -cudart=shared -lcudart; \
+	${NVCC} cutlass.cu -I include/ -I tools/util/include/ -cudart=shared -lcudart; \
 	cp a.out ../${BIN}/sgemm;
 
 ${BIN}/aes: | ./${BIN}
@@ -55,7 +56,7 @@ ${BIN}/aes: | ./${BIN}
 
 ${BIN}/sw: | ./${BIN}
 	cd GASAL2; \
-	nvcc src/*.cpp src/*.cu test_prog/*.cpp submodules/alignment_boilerplate/src/* -I include/ -I submodules/alignment_boilerplate/include -I src/ -cudart=shared -lcudart -DN_CODE=0x4E -DMAX_QUERY_LEN=1024 -lpthread -Xcompiler -fopenmp -o program_gpu; \
+	${NVCC} src/*.cpp src/*.cu test_prog/*.cpp submodules/alignment_boilerplate/src/* -I include/ -I submodules/alignment_boilerplate/include -I src/ -cudart=shared -lcudart -DN_CODE=0x4E -DMAX_QUERY_LEN=1024 -lpthread -Xcompiler -fopenmp -o program_gpu; \
 	cp ./program_gpu ../${BIN}/sw
 	
 	#mkdir -p build; \
