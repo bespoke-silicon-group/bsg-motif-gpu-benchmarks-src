@@ -10,6 +10,21 @@ all: ${BINARIES} #Jacobi  HE BH DMR
 ./${BIN}:
 	mkdir -p ${BIN}
 
+graphit_apps: | ./${BIN}
+	cd graphit; \
+	mkdir build; \
+	cd build; \
+	cmake ..; \
+	make -j$(nproc);
+	
+	cd ./graphit/graphit_eval/g2_cgo2021_eval; \
+	python3 gen_table7.py small; \
+	cp ./table7_outputs/pr ../../../${BIN}/; \
+	cp ./table7_outputs/ds_road ../../../${BIN}/; \
+	cp ./table7_outputs/ds_social ../../../${BIN}/; \
+	cp ./table7_outputs/bfs_social ../../../${BIN}/; \
+	cp ./table7_outputs/bfs_road ../../../${BIN}/;
+
 ${BIN}/bfs: | ./${BIN}
 	cd gunrock; \
 	mkdir -p build; \
