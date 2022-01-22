@@ -69,6 +69,12 @@ ${BIN}/aes: | ./${BIN}
 	make; \
 	cp ../../bin/linux/release/ispass-2009-AES ../../../../../${BIN}/aes
 
+${BIN}/bh: | ./${BIN}
+	cd Galois/lonestar/scientific/gpu/barneshut; \
+	nvcc bh.cu -I./../../../../libgpu/include -I./../../../../external/moderngpu/src -I./../../../../external/cub ./../../../../libgpu/src/csr_graph.cu ./../../../../libgpu/src/ggc_rt.cu  -cudart shared -O3 -DNDEBUG  -arch=sm_70 --expt-extended-lambda -std=c++14 -DTHRUST_IGNORE_CUB_VERSION_CHECK -D_FORCE_INLINES  -lcudadevrt -lcudart -o bh; \
+	cp bh ../../../../../${BIN}
+
+
 ${BIN}/sw: | ./${BIN}
 	cd GASAL2; \
 	${NVCC} src/*.cpp src/*.cu test_prog/*.cpp submodules/alignment_boilerplate/src/* -I include/ -I submodules/alignment_boilerplate/include -I src/ -cudart=shared -lcudart -DN_CODE=0x4E -DMAX_QUERY_LEN=1024 -lpthread -Xcompiler -fopenmp -o program_gpu; \
