@@ -19,7 +19,7 @@ func reset(v: Vertex)
 end
 
 func main()
-    for trail in 0:10
+    for trail in 0:1
         var start_vertex : int = atoi(argv[2]);
         pq = new priority_queue{Vertex}(int)(false, false, dist, 1, 2, false, start_vertex);
         startTimer();

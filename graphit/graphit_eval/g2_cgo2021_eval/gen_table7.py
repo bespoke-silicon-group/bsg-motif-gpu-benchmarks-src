@@ -95,14 +95,14 @@ def set_NVCC_COMMAND(MAX_REG=64):
 	
 	NVCC_COMMAND = NVCC_PATH + " -ccbin " + CXX_COMPILER + " -cudart=shared "
 	
-	get_command_output(NVCC_COMMAND + APPS_DIRECTORY + "/obtain_gpu_cc.cu -o obtain_gpu_cc")
-	output = get_command_output(GPU_PREFIX+"./obtain_gpu_cc").split()
+	#get_command_output(NVCC_COMMAND + APPS_DIRECTORY + "/obtain_gpu_cc.cu -o obtain_gpu_cc")
+	#output = get_command_output(GPU_PREFIX+"./obtain_gpu_cc").split()
 
-	if len(output) != 2:
-		print ("Cannot obtain GPU information")
-		exit(-1)
-	compute_capability = output[0]
-	num_of_sm = output[1]
+	#if len(output) != 2:
+	#	print ("Cannot obtain GPU information")
+	#	exit(-1)
+	#compute_capability = output[0]
+	num_of_sm = 80
 
 	if MAX_REG == 64:	
 		NVCC_COMMAND += " -DNUM_CTA=" + str(int(num_of_sm)*2) + " -DCTA_SIZE=512"
@@ -120,8 +120,8 @@ def compile_application(gtfile, binname):
 	if os.path.exists(binname):
 		return
 	get_command_output("python3 " + GRAPHIT_BUILD_PATH + "/bin/graphitc.py -f " + APPS_DIRECTORY + "/" + gtfile + " -o " + gtfile + ".cu")
-	get_command_output(NVCC_COMMAND + gtfile + ".cu -o " + binname)
 	print(NVCC_COMMAND + gtfile + ".cu -o " + binname)
+	get_command_output(NVCC_COMMAND + gtfile + ".cu -o " + binname)
 
 
 def run_sanity_check():
@@ -315,7 +315,7 @@ def main():
 	GRAPHIT_BUILD_PATH = read_default_path("Please choose GraphIt build directory", DIR_PATH + "/../../build")
 	DATASET_PATH = read_default_path("Please choose dataset path", DIR_PATH + "/dataset")
 	APPS_DIRECTORY = DIR_PATH+"/table7_inputs"
-	NVCC_PATH = read_default_path("Please choose NVCC path", "/usr/local/cuda/bin/nvcc")
+	NVCC_PATH = read_default_path("Please choose NVCC path", "/usr/local/cuda-11.5/bin/nvcc")
 	CXX_COMPILER = read_default_path("Please choose CXX_COMPILER", "/usr/bin/g++")
 
 	if os.path.exists(SCRATCH_PATH):

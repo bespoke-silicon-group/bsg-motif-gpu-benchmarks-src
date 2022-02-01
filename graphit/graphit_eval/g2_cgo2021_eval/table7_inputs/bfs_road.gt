@@ -19,7 +19,7 @@ func reset(v: Vertex)
 end
 
 func main()
-    for trail in 0:10
+    for trail in 0:1
     	var frontier : vertexset{Vertex} = new vertexset{Vertex}(0);
 	startTimer();
         vertices.apply(reset);
