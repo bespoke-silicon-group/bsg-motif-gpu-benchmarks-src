@@ -182,7 +182,7 @@ class Reader {
     while (true) {
       char c = in.peek();
       if (c == '%') {
-        in.ignore(200, '\n');
+        in.ignore(numeric_limits<streamsize>::max(), '\n');
       } else {
         break;
       }
