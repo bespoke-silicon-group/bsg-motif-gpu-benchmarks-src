@@ -1,0 +1,1 @@
+/usr/bin/c++    -rdynamic CMakeFiles/graph-convert.dir/graph-convert.o  -o graph-convert  -lgalois_shmem -lLLVMSupport 

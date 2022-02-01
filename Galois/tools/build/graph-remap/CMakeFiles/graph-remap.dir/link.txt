@@ -1,0 +1,1 @@
+/usr/bin/c++    -rdynamic CMakeFiles/graph-remap.dir/graph-remap.o  -o graph-remap  -lgalois_shmem -lLLVMSupport 
