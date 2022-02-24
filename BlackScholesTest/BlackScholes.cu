@@ -52,7 +52,7 @@ float RandFloat(float low, float high)
 ////////////////////////////////////////////////////////////////////////////////
 // Data configuration
 ////////////////////////////////////////////////////////////////////////////////
-const int  NUM_ITERATIONS = 1;
+const int  NUM_ITERATIONS = 1000;
 
 
 #define DIV_UP(a, b) ( ((a) + (b) - 1) / (b) )
@@ -103,8 +103,9 @@ int main(int argc, char **argv)
     *d_RiskFree,
     *d_Volatility;
 
-    double
-    delta, ref, sum_delta, sum_ref, max_delta, L1norm, gpuTime;
+    //double
+    //delta, ref, sum_delta, sum_ref, max_delta, L1norm, 
+    double gpuTime;
 
     StopWatchInterface *hTimer = NULL;
     int i;
@@ -167,77 +168,59 @@ int main(int argc, char **argv)
         		break;
         }*/
     }
- printf("%i\t", 2 * OPT_N);    double ttGPU = gpuTime;
+	 double ttGPU;
     //printf("Executing Black-Scholes GPU kernel (%i iterations)...\n", NUM_ITERATIONS);
     checkCudaErrors(cudaDeviceSynchronize());
     double total_time = 0;
     for (i = 0; i < NUM_ITERATIONS; i++)
     {
 	
-    sdkResetTimer(&hTimer);
-    //asm("wbinvd" ::: "memory");
-    flushc(h_StockPrice, OPT_SZ);
-    flushc(h_OptionStrike, OPT_SZ);
-    flushc(h_OptionYears, OPT_SZ);
-    flushc(h_RiskFree, OPT_SZ);
-    flushc(h_Volatility, OPT_SZ);
-    sdkStartTimer(&hTimer);
-    //printf("...copying input data to GPU mem.\n");
-    //Copy options data to GPU memory for further processing
-    checkCudaErrors(cudaMemcpy(d_StockPrice,   h_StockPrice,   OPT_SZ, cudaMemcpyHostToDevice));
-    checkCudaErrors(cudaMemcpy(d_OptionStrike, h_OptionStrike, OPT_SZ, cudaMemcpyHostToDevice));
-    checkCudaErrors(cudaMemcpy(d_OptionYears,  h_OptionYears,  OPT_SZ, cudaMemcpyHostToDevice));
-    checkCudaErrors(cudaMemcpy(d_RiskFree,     h_RiskFree,     OPT_SZ, cudaMemcpyHostToDevice));
-    checkCudaErrors(cudaMemcpy(d_Volatility,   h_Volatility,   OPT_SZ, cudaMemcpyHostToDevice));
-    //printf("Data init done.\n\n");
-    sdkStopTimer(&hTimer);
-    gpuTime = sdkGetTimerValue(&hTimer);
-    printf("%f\t", gpuTime);
-	ttGPU = gpuTime;
-	sdkResetTimer(&hTimer);
-    	sdkStartTimer(&hTimer);
-	if(i % 2 == 0)
-        BlackScholesGPU<<<DIV_UP((OPT_N/2), 128), 128/*480, 128*/>>>(
-            (float2 *)d_CallResult,
-            (float2 *)d_PutResult,
-            (float2 *)d_StockPrice,
-            (float2 *)d_OptionStrike,
-            (float2 *)d_OptionYears,
-            (float2 *)d_RiskFree,
-            (float2 *)d_Volatility,
-            OPT_N
-        );
-	else
-        BlackScholesGPU<<<DIV_UP((OPT_N/2), 128), 128/*480, 128*/>>>(
-            (float2 *)d_CallResult,
-            (float2 *)d_PutResult,
-            (float2 *)d_StockPrice,
-            (float2 *)d_OptionStrike,
-            (float2 *)d_OptionYears,
-            (float2 *)d_RiskFree,
-            (float2 *)d_Volatility,
-            OPT_N
-        );
- 
-	checkCudaErrors(cudaDeviceSynchronize());
-        sdkStopTimer(&hTimer);
-        gpuTime = sdkGetTimerValue(&hTimer); /// NUM_ITERATIONS;
-        printf("\t%f\t", gpuTime);
-	total_time = gpuTime;
-    	getLastCudaError("BlackScholesGPU() execution failed\n");
-sdkResetTimer(&hTimer);
-    sdkStartTimer(&hTimer);
-    //printf("\nReading back GPU results...\n");
-    //Read back GPU results to compare them to CPU results
-    checkCudaErrors(cudaMemcpy(h_CallResultGPU, d_CallResult, OPT_SZ, cudaMemcpyDeviceToHost));
-    checkCudaErrors(cudaMemcpy(h_PutResultGPU,  d_PutResult,  OPT_SZ, cudaMemcpyDeviceToHost));
+		sdkResetTimer(&hTimer);
+		sdkStartTimer(&hTimer);
+		//printf("...copying input data to GPU mem.\n");
+		//Copy options data to GPU memory for further processing
+		checkCudaErrors(cudaMemcpy(d_StockPrice,   h_StockPrice,   OPT_SZ, cudaMemcpyHostToDevice));
+		checkCudaErrors(cudaMemcpy(d_OptionStrike, h_OptionStrike, OPT_SZ, cudaMemcpyHostToDevice));
+		checkCudaErrors(cudaMemcpy(d_OptionYears,  h_OptionYears,  OPT_SZ, cudaMemcpyHostToDevice));
+		checkCudaErrors(cudaMemcpy(d_RiskFree,     h_RiskFree,     OPT_SZ, cudaMemcpyHostToDevice));
+		checkCudaErrors(cudaMemcpy(d_Volatility,   h_Volatility,   OPT_SZ, cudaMemcpyHostToDevice));
+		//printf("Data init done.\n\n");
+		sdkStopTimer(&hTimer);
+		gpuTime = sdkGetTimerValue(&hTimer);
+	 	printf("%i\t", 2 * OPT_N);    
+		printf("%f\t", gpuTime);
+		ttGPU = gpuTime;
+		sdkResetTimer(&hTimer);
+		sdkStartTimer(&hTimer);
+		BlackScholesGPU<<<DIV_UP((OPT_N/2), 128), 128/*480, 128*/>>>(
+		    (float2 *)d_CallResult,
+		    (float2 *)d_PutResult,
+		    (float2 *)d_StockPrice,
+		    (float2 *)d_OptionStrike,
+		    (float2 *)d_OptionYears,
+		    (float2 *)d_RiskFree,
+		    (float2 *)d_Volatility,
+		    OPT_N
+		);
 
-sdkStopTimer(&hTimer);
-    gpuTime = sdkGetTimerValue(&hTimer);
-    printf("\t%f\t%f\n\n", gpuTime, ttGPU + gpuTime + total_time);
+		checkCudaErrors(cudaDeviceSynchronize());
+	    sdkStopTimer(&hTimer);
+	    gpuTime = sdkGetTimerValue(&hTimer); /// NUM_ITERATIONS;
+	    printf("\t%f\t", gpuTime);
+		total_time = gpuTime;
+		getLastCudaError("BlackScholesGPU() execution failed\n");
+		sdkResetTimer(&hTimer);
+		sdkStartTimer(&hTimer);
+		//printf("\nReading back GPU results...\n");
+		//Read back GPU results to compare them to CPU results
+		checkCudaErrors(cudaMemcpy(h_CallResultGPU, d_CallResult, OPT_SZ, cudaMemcpyDeviceToHost));
+		checkCudaErrors(cudaMemcpy(h_PutResultGPU,  d_PutResult,  OPT_SZ, cudaMemcpyDeviceToHost));
 
-
+		sdkStopTimer(&hTimer);
+		gpuTime = sdkGetTimerValue(&hTimer);
+		printf("\t%f\t%f\n", gpuTime, ttGPU + gpuTime + total_time);
     }
+    printf("\n");
 	//printf("Exec time:\t%f\n", total_time / NUM_ITERATIONS);
     //Both call and put is calculated
     //printf("Options count             : %i     \n", 2 * OPT_N);
@@ -253,9 +236,9 @@ sdkStopTimer(&hTimer);
     //printf("Comparing the results...\n");
     //Calculate max absolute difference and L1 distance
     //between CPU and GPU results
-    sum_delta = 0;
-    sum_ref   = 0;
-    max_delta = 0;
+    //sum_delta = 0;
+    //sum_ref   = 0;
+    //max_delta = 0;
 /*
     for (i = 0; i < OPT_N; i++) {
     	if(h_CallResultCPU[i] >= 0) {
@@ -276,7 +259,7 @@ sdkStopTimer(&hTimer);
         sum_ref   += fabs(ref);
     }
 */
-    L1norm = sum_delta / sum_ref;
+    //L1norm = sum_delta / sum_ref;
     /*printf("L1 norm: %E\n", L1norm);
     printf("Max absolute error: %E\n\n", max_delta);
 
