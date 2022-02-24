@@ -19,7 +19,7 @@
 #include <helper_functions.h>   // helper functions for string parsing
 #include <helper_cuda.h>        // helper functions CUDA error checking and initialization
 #include <fstream>
-
+#include <x86intrin.h>
 ////////////////////////////////////////////////////////////////////////////////
 // Process an array of optN options on CPU
 ////////////////////////////////////////////////////////////////////////////////
@@ -52,10 +52,17 @@ float RandFloat(float low, float high)
 ////////////////////////////////////////////////////////////////////////////////
 // Data configuration
 ////////////////////////////////////////////////////////////////////////////////
-const int  NUM_ITERATIONS = 1000;
+const int  NUM_ITERATIONS = 1;
 
 
 #define DIV_UP(a, b) ( ((a) + (b) - 1) / (b) )
+
+void flushc(void *addr, long size)
+{
+	long k = 0;
+	for(auto i = (long)addr - ((long)addr) % 64; k < size; k += 64)
+		_mm_clflush((void*)((char*)addr + k));
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 // Main program
@@ -160,8 +167,20 @@ int main(int argc, char **argv)
         		break;
         }*/
     }
- printf("%i\n", 2 * OPT_N);
+ printf("%i\t", 2 * OPT_N);    double ttGPU = gpuTime;
+    //printf("Executing Black-Scholes GPU kernel (%i iterations)...\n", NUM_ITERATIONS);
+    checkCudaErrors(cudaDeviceSynchronize());
+    double total_time = 0;
+    for (i = 0; i < NUM_ITERATIONS; i++)
+    {
+	
     sdkResetTimer(&hTimer);
+    //asm("wbinvd" ::: "memory");
+    flushc(h_StockPrice, OPT_SZ);
+    flushc(h_OptionStrike, OPT_SZ);
+    flushc(h_OptionYears, OPT_SZ);
+    flushc(h_RiskFree, OPT_SZ);
+    flushc(h_Volatility, OPT_SZ);
     sdkStartTimer(&hTimer);
     //printf("...copying input data to GPU mem.\n");
     //Copy options data to GPU memory for further processing
@@ -171,17 +190,13 @@ int main(int argc, char **argv)
     checkCudaErrors(cudaMemcpy(d_RiskFree,     h_RiskFree,     OPT_SZ, cudaMemcpyHostToDevice));
     checkCudaErrors(cudaMemcpy(d_Volatility,   h_Volatility,   OPT_SZ, cudaMemcpyHostToDevice));
     //printf("Data init done.\n\n");
-sdkStopTimer(&hTimer);
-    gpuTime = sdkGetTimerValue(&hTimer) / NUM_ITERATIONS;
-printf("%f\n", gpuTime);
-
-    //printf("Executing Black-Scholes GPU kernel (%i iterations)...\n", NUM_ITERATIONS);
-    checkCudaErrors(cudaDeviceSynchronize());
-    sdkResetTimer(&hTimer);
-    sdkStartTimer(&hTimer);
-
-    for (i = 0; i < NUM_ITERATIONS; i++)
-    {
+    sdkStopTimer(&hTimer);
+    gpuTime = sdkGetTimerValue(&hTimer);
+    printf("%f\t", gpuTime);
+	ttGPU = gpuTime;
+	sdkResetTimer(&hTimer);
+    	sdkStartTimer(&hTimer);
+	if(i % 2 == 0)
         BlackScholesGPU<<<DIV_UP((OPT_N/2), 128), 128/*480, 128*/>>>(
             (float2 *)d_CallResult,
             (float2 *)d_PutResult,
@@ -192,31 +207,46 @@ printf("%f\n", gpuTime);
             (float2 *)d_Volatility,
             OPT_N
         );
-        getLastCudaError("BlackScholesGPU() execution failed\n");
-    }
-
-    checkCudaErrors(cudaDeviceSynchronize());
-    sdkStopTimer(&hTimer);
-    gpuTime = sdkGetTimerValue(&hTimer) / NUM_ITERATIONS;
-
-    //Both call and put is calculated
-    //printf("Options count             : %i     \n", 2 * OPT_N);
-    printf("%f\n", gpuTime);
-    //printf("Effective memory bandwidth: %f GB/s\n", ((double)(7 * OPT_N * sizeof(float)) * 1E-9) / (gpuTime * 1E-3));
-    //printf("Gigaoptions per second    : %f     \n\n", ((double)(2 * OPT_N) * 1E-9) / (gpuTime * 1E-3));
-
-    //printf("BlackScholes, Throughput = %.4f GOptions/s, Time = %.5f s, Size = %u options, NumDevsUsed = %u, Workgroup = %u\n",
-//           (((double)(2.0 * OPT_N) * 1.0E-9) / (gpuTime * 1.0E-3)), gpuTime*1e-3, (2 * OPT_N), 1, 128);
+	else
+        BlackScholesGPU<<<DIV_UP((OPT_N/2), 128), 128/*480, 128*/>>>(
+            (float2 *)d_CallResult,
+            (float2 *)d_PutResult,
+            (float2 *)d_StockPrice,
+            (float2 *)d_OptionStrike,
+            (float2 *)d_OptionYears,
+            (float2 *)d_RiskFree,
+            (float2 *)d_Volatility,
+            OPT_N
+        );
+ 
+	checkCudaErrors(cudaDeviceSynchronize());
+        sdkStopTimer(&hTimer);
+        gpuTime = sdkGetTimerValue(&hTimer); /// NUM_ITERATIONS;
+        printf("\t%f\t", gpuTime);
+	total_time = gpuTime;
+    	getLastCudaError("BlackScholesGPU() execution failed\n");
 sdkResetTimer(&hTimer);
     sdkStartTimer(&hTimer);
     //printf("\nReading back GPU results...\n");
     //Read back GPU results to compare them to CPU results
     checkCudaErrors(cudaMemcpy(h_CallResultGPU, d_CallResult, OPT_SZ, cudaMemcpyDeviceToHost));
     checkCudaErrors(cudaMemcpy(h_PutResultGPU,  d_PutResult,  OPT_SZ, cudaMemcpyDeviceToHost));
-sdkStopTimer(&hTimer);
-    gpuTime = sdkGetTimerValue(&hTimer) / NUM_ITERATIONS;
-    printf("%f\n\n", gpuTime);
 
+sdkStopTimer(&hTimer);
+    gpuTime = sdkGetTimerValue(&hTimer);
+    printf("\t%f\t%f\n\n", gpuTime, ttGPU + gpuTime + total_time);
+
+
+    }
+	//printf("Exec time:\t%f\n", total_time / NUM_ITERATIONS);
+    //Both call and put is calculated
+    //printf("Options count             : %i     \n", 2 * OPT_N);
+    //printf("%f\n", gpuTime);
+    //printf("Effective memory bandwidth: %f GB/s\n", ((double)(7 * OPT_N * sizeof(float)) * 1E-9) / (gpuTime * 1E-3));
+    //printf("Gigaoptions per second    : %f     \n\n", ((double)(2 * OPT_N) * 1E-9) / (gpuTime * 1E-3));
+
+    //printf("BlackScholes, Throughput = %.4f GOptions/s, Time = %.5f s, Size = %u options, NumDevsUsed = %u, Workgroup = %u\n",
+//           (((double)(2.0 * OPT_N) * 1.0E-9) / (gpuTime * 1.0E-3)), gpuTime*1e-3, (2 * OPT_N), 1, 128);
     //printf("Checking the results...\n");
     //printf("...running CPU calculations.\n\n");
 
