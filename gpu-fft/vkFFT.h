@@ -28,6 +28,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <fstream>
+#include <string>
+#ifdef STATIC_COMPILE
+#include "code.h"
+#endif
 #ifndef __STDC_FORMAT_MACROS
 #define __STDC_FORMAT_MACROS
 #endif
@@ -56,6 +61,8 @@
 #include <CL/cl.h>
 #endif
 #endif
+
+extern int kernelCount;
 
 typedef struct {
 	//WHDCN layout
@@ -3557,6 +3564,9 @@ static inline VkFFTResult appendSharedMemoryVkFFT(VkFFTSpecializationConstantsLa
 		sc->tempLen = sprintf(sc->tempStr, "%s* sdata = (%s*)shared;\n\n", vecType, vecType);
 		res = VkAppendLine(sc);
 		if (res != VKFFT_SUCCESS) return res;
+		/*sc->tempLen = sprintf(sc->tempStr, "if(threadIdx.x == 0 && blockIdx.x == 0) {unsigned y; asm volatile (\"mov.u32 %0, %%total_smem_size;\" : \"=r\"(y));printf(\"%%u %%u\\n\", y, sharedStride);}\n\n");
+		res = VkAppendLine(sc);
+		if (res != VKFFT_SUCCESS) return res;*/
 		//sc->tempLen = sprintf(sc->tempStr, "%s %s sdata[];\n\n", sharedDefinitions, vecType);
 #elif(VKFFT_BACKEND==2)
 		//sc->tempLen = sprintf(sc->tempStr, "%s %s sdata[%" PRIu64 "];\n\n", sharedDefinitions, vecType, sc->maxSharedStride * (sc->fftDim + mergeR2C) / sc->registerBoost);
@@ -16939,7 +16949,7 @@ static inline void freeShaderGenVkFFT(VkFFTSpecializationConstantsLayout* sc) {
 		sc->regIDs = 0;
 	}
 }
-static inline VkFFTResult shaderGenVkFFT(char* output, VkFFTSpecializationConstantsLayout* sc, const char* floatType, const char* floatTypeInputMemory, const char* floatTypeOutputMemory, const char* floatTypeKernelMemory, const char* uintType, uint64_t type) {
+static inline VkFFTResult shaderGenVkFFT(char* output, VkFFTSpecializationConstantsLayout* sc, const char* floatType, const char* floatTypeInputMemory, const char* floatTypeOutputMemory, const char* floatTypeKernelMemory, const char* uintType, uint64_t type, int axisId, int inverse) {
 	VkFFTResult res = VKFFT_SUCCESS;
 	//appendLicense(output);
 	sc->output = output;
@@ -17174,7 +17184,7 @@ static inline VkFFTResult shaderGenVkFFT(char* output, VkFFTSpecializationConsta
 		freeShaderGenVkFFT(sc);
 		return res;
 	}
-	sc->tempLen = sprintf(sc->tempStr, "extern \"C\" __global__ void __launch_bounds__(%" PRIu64 ") VkFFT_main ", sc->localSize[0] * sc->localSize[1] * sc->localSize[2]);
+	sc->tempLen = sprintf(sc->tempStr, "extern \"C\" __global__ void __launch_bounds__(%" PRIu64 ") VkFFT_main_%d_%d ", sc->localSize[0] * sc->localSize[1] * sc->localSize[2], axisId, inverse);
 	res = VkAppendLine(sc);
 	if (res != VKFFT_SUCCESS) {
 		freeShaderGenVkFFT(sc);
@@ -22504,6 +22514,7 @@ static inline VkFFTResult VkFFTPlanR2CMultiUploadDecomposition(VkFFTApplication*
 		vkDestroyShaderModule(app->configuration.device[0], pipelineShaderStageCreateInfo.module, 0);
 		glslang_program_delete(program);
 #elif(VKFFT_BACKEND==1)
+	#ifndef STATIC_COMPILE
 		nvrtcProgram prog;
 		nvrtcResult result = nvrtcCreateProgram(&prog,         // prog
 			code0,         // buffer
@@ -22606,6 +22617,7 @@ static inline VkFFTResult VkFFTPlanR2CMultiUploadDecomposition(VkFFTApplication*
 			return VKFFT_ERROR_FAILED_TO_GET_FUNCTION;
 		}
 		if (axis->specializationConstants.usedSharedMemory > app->configuration.sharedMemorySizeStatic) {
+			printf("SETTING THIS2\n");
 			result2 = cuFuncSetAttribute(axis->VkFFTKernel, CU_FUNC_ATTRIBUTE_MAX_DYNAMIC_SHARED_SIZE_BYTES, (int)axis->specializationConstants.usedSharedMemory);
 			if (result2 != CUDA_SUCCESS) {
 				printf("cuFuncSetAttribute error: %d\n", result2);
@@ -22630,6 +22642,7 @@ static inline VkFFTResult VkFFTPlanR2CMultiUploadDecomposition(VkFFTApplication*
 		}
 		free(ptx);
 		ptx = 0;
+	#endif
 #elif(VKFFT_BACKEND==2)
 		hiprtcProgram prog;
 		/*char* includeNames = (char*)malloc(sizeof(char)*100);
@@ -24324,7 +24337,10 @@ static inline VkFFTResult VkFFTPlanAxis(VkFFTApplication* app, VkFFTPlan* FFTPla
 			deleteVkFFT(app);
 			return VKFFT_ERROR_MALLOC_FAILED;
 		}
-		shaderGenVkFFT(code0, &axis->specializationConstants, floatType, floatTypeInputMemory, floatTypeOutputMemory, floatTypeKernelMemory, uintType, type);
+		shaderGenVkFFT(code0, &axis->specializationConstants, floatType, floatTypeInputMemory, floatTypeOutputMemory, floatTypeKernelMemory, uintType, type, axis_upload_id, inverse);
+		std::ofstream outputCode(std::string("code") + std::to_string(kernelCount) + ".cu");
+		outputCode << code0;
+		outputCode.close();
 #if(VKFFT_BACKEND==0)
 		const glslang_resource_t default_resource = {
 			/* .MaxLights = */ 32,
@@ -24534,6 +24550,7 @@ static inline VkFFTResult VkFFTPlanAxis(VkFFTApplication* app, VkFFTPlan* FFTPla
 		vkDestroyShaderModule(app->configuration.device[0], pipelineShaderStageCreateInfo.module, 0);
 		glslang_program_delete(program);
 #elif(VKFFT_BACKEND==1)
+	#ifndef STATIC_COMPILE
 		nvrtcProgram prog;
 		nvrtcResult result = nvrtcCreateProgram(&prog,         // prog
 			code0,         // buffer
@@ -24625,7 +24642,7 @@ static inline VkFFTResult VkFFTPlanAxis(VkFFTApplication* app, VkFFTPlan* FFTPla
 			deleteVkFFT(app);
 			return VKFFT_ERROR_FAILED_TO_LOAD_MODULE;
 		}
-		result2 = cuModuleGetFunction(&axis->VkFFTKernel, axis->VkFFTModule, "VkFFT_main");
+		result2 = cuModuleGetFunction(&axis->VkFFTKernel, axis->VkFFTModule, ("VkFFT_main_" + std::to_string(axis_upload_id) + "_" + std::to_string(inverse)).c_str());
 		if (result2 != CUDA_SUCCESS) {
 			printf("cuModuleGetFunction error: %d\n", result2);
 			free(ptx);
@@ -24636,6 +24653,7 @@ static inline VkFFTResult VkFFTPlanAxis(VkFFTApplication* app, VkFFTPlan* FFTPla
 			return VKFFT_ERROR_FAILED_TO_GET_FUNCTION;
 		}
 		if (axis->specializationConstants.usedSharedMemory > app->configuration.sharedMemorySizeStatic) {
+			printf("SETTING THIS\n");
 			result2 = cuFuncSetAttribute(axis->VkFFTKernel, CU_FUNC_ATTRIBUTE_MAX_DYNAMIC_SHARED_SIZE_BYTES, (int)axis->specializationConstants.usedSharedMemory);
 			if (result2 != CUDA_SUCCESS) {
 				printf("cuFuncSetAttribute error: %d\n", result2);
@@ -24660,6 +24678,12 @@ static inline VkFFTResult VkFFTPlanAxis(VkFFTApplication* app, VkFFTPlan* FFTPla
 		}
 		free(ptx);
 		ptx = 0;
+		printf("Recompiling\n");
+		std::ofstream outputCode2(std::string("coder") + "_" + std::to_string(axis_upload_id) + "_" + std::to_string(inverse) + ".cu");
+		outputCode2 << code0;
+		outputCode2.close();
+	#endif
+		//++kernelCount;
 #elif(VKFFT_BACKEND==2)
 		hiprtcProgram prog;
 		/*char* includeNames = (char*)malloc(sizeof(char)*100);
@@ -24956,65 +24980,81 @@ static inline VkFFTResult initializeVkFFT(VkFFTApplication* app, VkFFTConfigurat
 	if (inputLaunchConfiguration.stream != 0)	app->configuration.stream = inputLaunchConfiguration.stream;
 	app->configuration.streamID = 0;
 	int value = 0;
+	/*
 	res = cuDeviceGetAttribute(&value, CU_DEVICE_ATTRIBUTE_MAX_THREADS_PER_BLOCK, app->configuration.device[0]);
 	if (res != CUDA_SUCCESS) {
 		deleteVkFFT(app);
 		return VKFFT_ERROR_FAILED_TO_GET_ATTRIBUTE;
 	}
+	*/
+	// HAX FOR GPGPU-SIM
+	value = 1024;
 	app->configuration.maxThreadsNum = value;
+	/*
 	res = cuDeviceGetAttribute(&value, CU_DEVICE_ATTRIBUTE_MAX_GRID_DIM_X, app->configuration.device[0]);
 	if (res != CUDA_SUCCESS) {
 		deleteVkFFT(app);
 		return VKFFT_ERROR_FAILED_TO_GET_ATTRIBUTE;
-	}
+	}*/
+	value = pow(2, 31) - 1;
 	app->configuration.maxComputeWorkGroupCount[0] = value;
+	/*
 	res = cuDeviceGetAttribute(&value, CU_DEVICE_ATTRIBUTE_MAX_GRID_DIM_Y, app->configuration.device[0]);
 	if (res != CUDA_SUCCESS) {
 		deleteVkFFT(app);
 		return VKFFT_ERROR_FAILED_TO_GET_ATTRIBUTE;
-	}
+	}*/
+	value = 65535;
 	app->configuration.maxComputeWorkGroupCount[1] = value;
-	res = cuDeviceGetAttribute(&value, CU_DEVICE_ATTRIBUTE_MAX_GRID_DIM_Z, app->configuration.device[0]);
+	/*res = cuDeviceGetAttribute(&value, CU_DEVICE_ATTRIBUTE_MAX_GRID_DIM_Z, app->configuration.device[0]);
 	if (res != CUDA_SUCCESS) {
 		deleteVkFFT(app);
 		return VKFFT_ERROR_FAILED_TO_GET_ATTRIBUTE;
-	}
+	}*/
+	value = 65535;
 	app->configuration.maxComputeWorkGroupCount[2] = value;
-	res = cuDeviceGetAttribute(&value, CU_DEVICE_ATTRIBUTE_MAX_BLOCK_DIM_X, app->configuration.device[0]);
+	/*res = cuDeviceGetAttribute(&value, CU_DEVICE_ATTRIBUTE_MAX_BLOCK_DIM_X, app->configuration.device[0]);
 	if (res != CUDA_SUCCESS) {
 		deleteVkFFT(app);
 		return VKFFT_ERROR_FAILED_TO_GET_ATTRIBUTE;
-	}
+	}*/
+	value = 1024;
 	app->configuration.maxComputeWorkGroupSize[0] = value;
-	res = cuDeviceGetAttribute(&value, CU_DEVICE_ATTRIBUTE_MAX_BLOCK_DIM_Y, app->configuration.device[0]);
+	/*res = cuDeviceGetAttribute(&value, CU_DEVICE_ATTRIBUTE_MAX_BLOCK_DIM_Y, app->configuration.device[0]);
 	if (res != CUDA_SUCCESS) {
 		deleteVkFFT(app);
 		return VKFFT_ERROR_FAILED_TO_GET_ATTRIBUTE;
-	}
+	}*/
+	value = 1024;
 	app->configuration.maxComputeWorkGroupSize[1] = value;
-	res = cuDeviceGetAttribute(&value, CU_DEVICE_ATTRIBUTE_MAX_BLOCK_DIM_Z, app->configuration.device[0]);
+	/*res = cuDeviceGetAttribute(&value, CU_DEVICE_ATTRIBUTE_MAX_BLOCK_DIM_Z, app->configuration.device[0]);
 	if (res != CUDA_SUCCESS) {
 		deleteVkFFT(app);
 		return VKFFT_ERROR_FAILED_TO_GET_ATTRIBUTE;
-	}
+	}*/
+	value = 64;
 	app->configuration.maxComputeWorkGroupSize[2] = value;
+	/*
 	res = cuDeviceGetAttribute(&value, CU_DEVICE_ATTRIBUTE_MAX_SHARED_MEMORY_PER_BLOCK, app->configuration.device[0]);
 	if (res != CUDA_SUCCESS) {
 		deleteVkFFT(app);
 		return VKFFT_ERROR_FAILED_TO_GET_ATTRIBUTE;
-	}
+	}*/
+	value = 96 * 1024;
 	app->configuration.sharedMemorySizeStatic = value;
-	res = cuDeviceGetAttribute(&value, CU_DEVICE_ATTRIBUTE_MAX_SHARED_MEMORY_PER_BLOCK_OPTIN, app->configuration.device[0]);
+	/*res = cuDeviceGetAttribute(&value, CU_DEVICE_ATTRIBUTE_MAX_SHARED_MEMORY_PER_BLOCK_OPTIN, app->configuration.device[0]);
 	if (res != CUDA_SUCCESS) {
 		deleteVkFFT(app);
 		return VKFFT_ERROR_FAILED_TO_GET_ATTRIBUTE;
-	}
+	}*/
+	value = 96 * 1024;
 	app->configuration.sharedMemorySize = value;// (value > 65536) ? 65536 : value;
-	res = cuDeviceGetAttribute(&value, CU_DEVICE_ATTRIBUTE_WARP_SIZE, app->configuration.device[0]);
+	/*res = cuDeviceGetAttribute(&value, CU_DEVICE_ATTRIBUTE_WARP_SIZE, app->configuration.device[0]);
 	if (res != CUDA_SUCCESS) {
 		deleteVkFFT(app);
 		return VKFFT_ERROR_FAILED_TO_GET_ATTRIBUTE;
-	}
+	}*/
+	value = 32;
 	app->configuration.warpSize = value;
 	app->configuration.sharedMemorySizePow2 = (uint64_t)pow(2, (uint64_t)log2(app->configuration.sharedMemorySize));
 	if (app->configuration.num_streams > 1) {
@@ -25710,7 +25750,7 @@ static inline VkFFTResult initializeVkFFT(VkFFTApplication* app, VkFFTConfigurat
 #endif
 	return resFFT;
 }
-static inline VkFFTResult dispatchEnhanced(VkFFTApplication* app, VkFFTAxis* axis, uint64_t* dispatchBlock) {
+static inline VkFFTResult dispatchEnhanced(VkFFTApplication* app, VkFFTAxis* axis, uint64_t* dispatchBlock, int inverse) {
 	VkFFTResult resFFT = VKFFT_SUCCESS;
 	uint64_t maxBlockSize[3] = { (uint64_t)pow(2,(uint64_t)log2(app->configuration.maxComputeWorkGroupCount[0])),(uint64_t)pow(2,(uint64_t)log2(app->configuration.maxComputeWorkGroupCount[1])),(uint64_t)pow(2,(uint64_t)log2(app->configuration.maxComputeWorkGroupCount[2])) };
 	uint64_t blockNumber[3] = { (uint64_t)ceil(dispatchBlock[0] / (double)maxBlockSize[0]),(uint64_t)ceil(dispatchBlock[1] / (double)maxBlockSize[1]),(uint64_t)ceil(dispatchBlock[2] / (double)maxBlockSize[2]) };
@@ -25819,18 +25859,75 @@ static inline VkFFTResult dispatchEnhanced(VkFFTApplication* app, VkFFTAxis* axi
 					}
 				}
 				if (app->configuration.num_streams >= 1) {
+				++kernelCount;
+				#ifdef STATIC_COMPILE
+					dim3 gridDim((unsigned int)maxBlockSize[0], (unsigned int)maxBlockSize[1], (unsigned int)maxBlockSize[2]);
+					dim3 blockDim((unsigned int)axis->specializationConstants.localSize[0], (unsigned int)axis->specializationConstants.localSize[1], (unsigned int)axis->specializationConstants.localSize[2]);
+					printf("GridDim (%d, %d, %d), blockDim (%d, %d, %d), shared mem: %d\n", (unsigned int)maxBlockSize[0], (unsigned int)maxBlockSize[1], (unsigned int)maxBlockSize[2], 
+						(unsigned int)axis->specializationConstants.localSize[0], (unsigned int)axis->specializationConstants.localSize[1], (unsigned int)axis->specializationConstants.localSize[2], 
+						(unsigned int)axis->specializationConstants.usedSharedMemory);
+					if(axis->specializationConstants.axis_upload_id == 0 && inverse == -1) { 
+						VkFFT_main_0_0<<<gridDim, blockDim,(unsigned int)axis->specializationConstants.usedSharedMemory, app->configuration.stream[app->configuration.streamID]>>> (*(float2 **)args[0], *(float2 **)args[1], *(float2 **)args[2]);
+						printf("Launched 0, 0\n");
+					}
+					else if(axis->specializationConstants.axis_upload_id == 0 && inverse == 1) {
+						VkFFT_main_0_1<<<gridDim, blockDim,(unsigned int)axis->specializationConstants.usedSharedMemory, app->configuration.stream[app->configuration.streamID]>>> (*(float2 **)args[0], *(float2 **)args[1], *(float2 **)args[2]);
+						printf("Launched 0, 1\n");
+					}
+					else if(axis->specializationConstants.axis_upload_id == 1 && inverse == -1) {
+						VkFFT_main_1_0<<<gridDim, blockDim,(unsigned int)axis->specializationConstants.usedSharedMemory, app->configuration.stream[app->configuration.streamID]>>> (*(float2 **)args[0], *(float2 **)args[1], *(float2 **)args[2]);
+						printf("Launched 1, 0\n");
+					}
+					else if(axis->specializationConstants.axis_upload_id == 1 && inverse == 1) {
+						VkFFT_main_1_1<<<gridDim, blockDim,(unsigned int)axis->specializationConstants.usedSharedMemory, app->configuration.stream[app->configuration.streamID]>>> (*(float2 **)args[0], *(float2 **)args[1], *(float2 **)args[2]);
+						printf("Launched 1, 1\n");
+					}
+					else	printf("Launched none\n");
+					//cudaDeviceSynchronize();
+					printf("HERE\n");
+				#else
+					printf("%d %d\n", axis->specializationConstants.axis_upload_id, inverse);
+					printf("GridDim (%d, %d, %d), blockDim (%d, %d, %d), shared mem: %d\n", (unsigned int)maxBlockSize[0], (unsigned int)maxBlockSize[1], (unsigned int)maxBlockSize[2], 
+						(unsigned int)axis->specializationConstants.localSize[0], (unsigned int)axis->specializationConstants.localSize[1], (unsigned int)axis->specializationConstants.localSize[2], 
+						(unsigned int)axis->specializationConstants.usedSharedMemory);
 					result = cuLaunchKernel(axis->VkFFTKernel,
 						(unsigned int)maxBlockSize[0], (unsigned int)maxBlockSize[1], (unsigned int)maxBlockSize[2],     // grid dim
 						(unsigned int)axis->specializationConstants.localSize[0], (unsigned int)axis->specializationConstants.localSize[1], (unsigned int)axis->specializationConstants.localSize[2],   // block dim
 						(unsigned int)axis->specializationConstants.usedSharedMemory, app->configuration.stream[app->configuration.streamID],             // shared mem and stream
 						args, 0);
+					//cudaDeviceSynchronize();
+					printf("HERE2, kernel %d\n", kernelCount);
+				#endif
 				}
 				else {
+				++kernelCount;
+				#ifdef STATIC_COMPILE
+					dim3 gridDim((unsigned int)maxBlockSize[0], (unsigned int)maxBlockSize[1], (unsigned int)maxBlockSize[2]);
+					dim3 blockDim((unsigned int)axis->specializationConstants.localSize[0], (unsigned int)axis->specializationConstants.localSize[1], (unsigned int)axis->specializationConstants.localSize[2]);
+					if(axis->specializationConstants.axis_upload_id == 0 && inverse == 0) { 
+						VkFFT_main_0_0<<<gridDim, blockDim,(unsigned int)axis->specializationConstants.usedSharedMemory>>> (*(float2 **)args[0], *(float2 **)args[1], *(float2 **)args[2]);
+						printf("Launched 0, 0\n");
+					}
+					else if(axis->specializationConstants.axis_upload_id == 0 && inverse == 1) {
+						VkFFT_main_0_1<<<gridDim, blockDim,(unsigned int)axis->specializationConstants.usedSharedMemory>>> (*(float2 **)args[0], *(float2 **)args[1], *(float2 **)args[2]);
+						printf("Launched 0, 1\n");
+					}
+					else if(axis->specializationConstants.axis_upload_id == 1 && inverse == 0) {
+						VkFFT_main_1_0<<<gridDim, blockDim,(unsigned int)axis->specializationConstants.usedSharedMemory>>> (*(float2 **)args[0], *(float2 **)args[1], *(float2 **)args[2]);
+						printf("Launched 1, 0\n");
+					}
+					else if(axis->specializationConstants.axis_upload_id == 1 && inverse == 1) {
+						VkFFT_main_1_1<<<gridDim, blockDim,(unsigned int)axis->specializationConstants.usedSharedMemory>>> (*(float2 **)args[0], *(float2 **)args[1], *(float2 **)args[2]);
+						printf("Launched 1, 1\n");
+					}
+					else	printf("Launched none\n");
+				#else
 					result = cuLaunchKernel(axis->VkFFTKernel,
 						(unsigned int)maxBlockSize[0], (unsigned int)maxBlockSize[1], (unsigned int)maxBlockSize[2],     // grid dim
 						(unsigned int)axis->specializationConstants.localSize[0], (unsigned int)axis->specializationConstants.localSize[1], (unsigned int)axis->specializationConstants.localSize[2],   // block dim
 						(unsigned int)axis->specializationConstants.usedSharedMemory, 0,             // shared mem and stream
 						args, 0);
+				#endif
 				}
 				if (result != CUDA_SUCCESS) {
 					printf("cuLaunchKernel error: %d, %" PRIu64 " %" PRIu64 " %" PRIu64 " - %" PRIu64 " %" PRIu64 " %" PRIu64 "\n", result, maxBlockSize[0], maxBlockSize[1], maxBlockSize[2], axis->specializationConstants.localSize[0], axis->specializationConstants.localSize[1], axis->specializationConstants.localSize[2]);
@@ -26112,7 +26209,7 @@ static inline VkFFTResult VkFFTAppend(VkFFTApplication* app, int inverse, VkFFTL
 				if (axis->specializationConstants.mergeSequencesR2C == 1) dispatchBlock[1] = (uint64_t)ceil(dispatchBlock[1] / 2.0);
 				//if (app->configuration.performZeropadding[1]) dispatchBlock[1] = (uint64_t)ceil(dispatchBlock[1] / 2.0);
 				//if (app->configuration.performZeropadding[2]) dispatchBlock[2] = (uint64_t)ceil(dispatchBlock[2] / 2.0);
-				resFFT = dispatchEnhanced(app, axis, dispatchBlock);
+				resFFT = dispatchEnhanced(app, axis, dispatchBlock, inverse);
 				if (resFFT != VKFFT_SUCCESS) return resFFT;
 				printDebugInformation(app, axis);
 				resFFT = VkFFTSync(app);
@@ -26153,7 +26250,7 @@ static inline VkFFTResult VkFFTAppend(VkFFTApplication* app, int inverse, VkFFTL
 					if (axis->specializationConstants.mergeSequencesR2C == 1) dispatchBlock[1] = (uint64_t)ceil(dispatchBlock[1] / 2.0);
 					//if (app->configuration.performZeropadding[1]) dispatchBlock[1] = (uint64_t)ceil(dispatchBlock[1] / 2.0);
 					//if (app->configuration.performZeropadding[2]) dispatchBlock[2] = (uint64_t)ceil(dispatchBlock[2] / 2.0);
-					resFFT = dispatchEnhanced(app, axis, dispatchBlock);
+					resFFT = dispatchEnhanced(app, axis, dispatchBlock, inverse);
 					if (resFFT != VKFFT_SUCCESS) return resFFT;
 					printDebugInformation(app, axis);
 					resFFT = VkFFTSync(app);
@@ -26175,7 +26272,7 @@ static inline VkFFTResult VkFFTAppend(VkFFTApplication* app, int inverse, VkFFTL
 				dispatchBlock[0] = (uint64_t)ceil(((app->configuration.size[0] / 2) * app->configuration.size[1] * app->configuration.size[2]) / (double)(2 * axis->axisBlock[0]));
 				dispatchBlock[1] = 1;
 				dispatchBlock[2] = maxCoordinate * app->configuration.numberBatches;
-				resFFT = dispatchEnhanced(app, axis, dispatchBlock);
+				resFFT = dispatchEnhanced(app, axis, dispatchBlock, inverse);
 				if (resFFT != VKFFT_SUCCESS) return resFFT;
 				printDebugInformation(app, axis);
 				resFFT = VkFFTSync(app);
@@ -26205,7 +26302,7 @@ static inline VkFFTResult VkFFTAppend(VkFFTApplication* app, int inverse, VkFFTL
 						dispatchBlock[2] = app->localFFTPlan->actualFFTSizePerAxis[1][2] * maxCoordinate * app->configuration.numberBatches;
 						//if (app->configuration.mergeSequencesR2C == 1) dispatchBlock[0] = (uint64_t)ceil(dispatchBlock[0] / 2.0);
 						//if (app->configuration.performZeropadding[2]) dispatchBlock[2] = (uint64_t)ceil(dispatchBlock[2] / 2.0);
-						resFFT = dispatchEnhanced(app, axis, dispatchBlock);
+						resFFT = dispatchEnhanced(app, axis, dispatchBlock, inverse);
 						if (resFFT != VKFFT_SUCCESS) return resFFT;
 						printDebugInformation(app, axis);
 						resFFT = VkFFTSync(app);
@@ -26230,7 +26327,7 @@ static inline VkFFTResult VkFFTAppend(VkFFTApplication* app, int inverse, VkFFTL
 						dispatchBlock[2] = app->localFFTPlan->actualFFTSizePerAxis[1][2] * app->configuration.coordinateFeatures * app->configuration.numberBatches;
 						//if (app->configuration.mergeSequencesR2C == 1) dispatchBlock[0] = (uint64_t)ceil(dispatchBlock[0] / 2.0);
 						//if (app->configuration.performZeropadding[2]) dispatchBlock[2] = (uint64_t)ceil(dispatchBlock[2] / 2.0);
-						resFFT = dispatchEnhanced(app, axis, dispatchBlock);
+						resFFT = dispatchEnhanced(app, axis, dispatchBlock, inverse);
 						if (resFFT != VKFFT_SUCCESS) return resFFT;
 						printDebugInformation(app, axis);
 
@@ -26253,7 +26350,7 @@ static inline VkFFTResult VkFFTAppend(VkFFTApplication* app, int inverse, VkFFTL
 
 							//if (app->configuration.performZeropadding[1]) dispatchBlock[1] = (uint64_t)ceil(dispatchBlock[1] / 2.0);
 							//if (app->configuration.performZeropadding[2]) dispatchBlock[2] = (uint64_t)ceil(dispatchBlock[2] / 2.0);
-							resFFT = dispatchEnhanced(app, axis, dispatchBlock);
+							resFFT = dispatchEnhanced(app, axis, dispatchBlock, inverse);
 							if (resFFT != VKFFT_SUCCESS) return resFFT;
 							printDebugInformation(app, axis);
 							resFFT = VkFFTSync(app);
@@ -26283,7 +26380,7 @@ static inline VkFFTResult VkFFTAppend(VkFFTApplication* app, int inverse, VkFFTL
 						dispatchBlock[1] = 1;
 						dispatchBlock[2] = app->localFFTPlan->actualFFTSizePerAxis[2][1] * maxCoordinate * app->configuration.numberBatches;
 						//if (app->configuration.mergeSequencesR2C == 1) dispatchBlock[0] = (uint64_t)ceil(dispatchBlock[0] / 2.0);
-						resFFT = dispatchEnhanced(app, axis, dispatchBlock);
+						resFFT = dispatchEnhanced(app, axis, dispatchBlock, inverse);
 						if (resFFT != VKFFT_SUCCESS) return resFFT;
 						printDebugInformation(app, axis);
 						resFFT = VkFFTSync(app);
@@ -26305,7 +26402,7 @@ static inline VkFFTResult VkFFTAppend(VkFFTApplication* app, int inverse, VkFFTL
 						dispatchBlock[1] = 1;
 						dispatchBlock[2] = app->localFFTPlan->actualFFTSizePerAxis[2][1] * app->configuration.coordinateFeatures * app->configuration.numberBatches;
 						//if (app->configuration.mergeSequencesR2C == 1) dispatchBlock[0] = (uint64_t)ceil(dispatchBlock[0] / 2.0);
-						resFFT = dispatchEnhanced(app, axis, dispatchBlock);
+						resFFT = dispatchEnhanced(app, axis, dispatchBlock, inverse);
 						if (resFFT != VKFFT_SUCCESS) return resFFT;
 						printDebugInformation(app, axis);
 						resFFT = VkFFTSync(app);
@@ -26327,7 +26424,7 @@ static inline VkFFTResult VkFFTAppend(VkFFTApplication* app, int inverse, VkFFTL
 
 							//if (app->configuration.performZeropadding[1]) dispatchBlock[1] = (uint64_t)ceil(dispatchBlock[1] / 2.0);
 							//if (app->configuration.performZeropadding[2]) dispatchBlock[2] = (uint64_t)ceil(dispatchBlock[2] / 2.0);
-							resFFT = dispatchEnhanced(app, axis, dispatchBlock);
+							resFFT = dispatchEnhanced(app, axis, dispatchBlock, inverse);
 							if (resFFT != VKFFT_SUCCESS) return resFFT;
 							printDebugInformation(app, axis);
 							resFFT = VkFFTSync(app);
@@ -26358,7 +26455,7 @@ static inline VkFFTResult VkFFTAppend(VkFFTApplication* app, int inverse, VkFFTL
 					dispatchBlock[1] = 1;
 					dispatchBlock[2] = app->localFFTPlan_inverse->actualFFTSizePerAxis[2][1] * app->configuration.coordinateFeatures * app->configuration.numberKernels;
 					//if (app->configuration.mergeSequencesR2C == 1) dispatchBlock[0] = (uint64_t)ceil(dispatchBlock[0] / 2.0);
-					resFFT = dispatchEnhanced(app, axis, dispatchBlock);
+					resFFT = dispatchEnhanced(app, axis, dispatchBlock, inverse);
 					if (resFFT != VKFFT_SUCCESS) return resFFT;
 					printDebugInformation(app, axis);
 					resFFT = VkFFTSync(app);
@@ -26381,7 +26478,7 @@ static inline VkFFTResult VkFFTAppend(VkFFTApplication* app, int inverse, VkFFTL
 				dispatchBlock[2] = app->localFFTPlan_inverse->actualFFTSizePerAxis[1][2] * app->configuration.coordinateFeatures * app->configuration.numberKernels;
 				//if (app->configuration.mergeSequencesR2C == 1) dispatchBlock[0] = (uint64_t)ceil(dispatchBlock[0] / 2.0);
 				//if (app->configuration.performZeropadding[2]) dispatchBlock[2] = (uint64_t)ceil(dispatchBlock[2] / 2.0);
-				resFFT = dispatchEnhanced(app, axis, dispatchBlock);
+				resFFT = dispatchEnhanced(app, axis, dispatchBlock, inverse);
 				if (resFFT != VKFFT_SUCCESS) return resFFT;
 				printDebugInformation(app, axis);
 				resFFT = VkFFTSync(app);
@@ -26407,7 +26504,7 @@ static inline VkFFTResult VkFFTAppend(VkFFTApplication* app, int inverse, VkFFTL
 					dispatchBlock[2] = app->localFFTPlan_inverse->actualFFTSizePerAxis[1][2] * app->configuration.coordinateFeatures * app->configuration.numberKernels;
 					//if (app->configuration.mergeSequencesR2C == 1) dispatchBlock[0] = (uint64_t)ceil(dispatchBlock[0] / 2.0);
 					//if (app->configuration.performZeropadding[2]) dispatchBlock[2] = (uint64_t)ceil(dispatchBlock[2] / 2.0);
-					resFFT = dispatchEnhanced(app, axis, dispatchBlock);
+					resFFT = dispatchEnhanced(app, axis, dispatchBlock, inverse);
 					if (resFFT != VKFFT_SUCCESS) return resFFT;
 					printDebugInformation(app, axis);
 					resFFT = VkFFTSync(app);
@@ -26448,7 +26545,7 @@ static inline VkFFTResult VkFFTAppend(VkFFTApplication* app, int inverse, VkFFTL
 				if (axis->specializationConstants.mergeSequencesR2C == 1) dispatchBlock[1] = (uint64_t)ceil(dispatchBlock[1] / 2.0);
 				//if (app->configuration.performZeropadding[1]) dispatchBlock[1] = (uint64_t)ceil(dispatchBlock[1] / 2.0);
 				//if (app->configuration.performZeropadding[2]) dispatchBlock[2] = (uint64_t)ceil(dispatchBlock[2] / 2.0);
-				resFFT = dispatchEnhanced(app, axis, dispatchBlock);
+				resFFT = dispatchEnhanced(app, axis, dispatchBlock, inverse);
 				if (resFFT != VKFFT_SUCCESS) return resFFT;
 				printDebugInformation(app, axis);
 				resFFT = VkFFTSync(app);
@@ -26471,7 +26568,7 @@ static inline VkFFTResult VkFFTAppend(VkFFTApplication* app, int inverse, VkFFTL
 				dispatchBlock[2] = app->localFFTPlan_inverse->actualFFTSizePerAxis[0][2] * app->configuration.coordinateFeatures * app->configuration.numberKernels;
 				//if (app->configuration.mergeSequencesR2C == 1) dispatchBlock[0] = (uint64_t)ceil(dispatchBlock[0] / 2.0);
 				//if (app->configuration.performZeropadding[2]) dispatchBlock[2] = (uint64_t)ceil(dispatchBlock[2] / 2.0);
-				resFFT = dispatchEnhanced(app, axis, dispatchBlock);
+				resFFT = dispatchEnhanced(app, axis, dispatchBlock, inverse);
 				if (resFFT != VKFFT_SUCCESS) return resFFT;
 				printDebugInformation(app, axis);
 				resFFT = VkFFTSync(app);
@@ -26503,7 +26600,7 @@ static inline VkFFTResult VkFFTAppend(VkFFTApplication* app, int inverse, VkFFTL
 					//if (app->configuration.performZeropaddingInverse[1]) dispatchBlock[1] = (uint64_t)ceil(dispatchBlock[1] / 2.0);
 
 					//if (app->configuration.mergeSequencesR2C == 1) dispatchBlock[0] = (uint64_t)ceil(dispatchBlock[0] / 2.0);
-					resFFT = dispatchEnhanced(app, axis, dispatchBlock);
+					resFFT = dispatchEnhanced(app, axis, dispatchBlock, inverse);
 					if (resFFT != VKFFT_SUCCESS) return resFFT;
 					printDebugInformation(app, axis);
 					resFFT = VkFFTSync(app);
@@ -26534,7 +26631,7 @@ static inline VkFFTResult VkFFTAppend(VkFFTApplication* app, int inverse, VkFFTL
 					//if (app->configuration.performZeropadding[2]) dispatchBlock[2] = (uint64_t)ceil(dispatchBlock[2] / 2.0);
 					//if (app->configuration.performZeropaddingInverse[0]) dispatchBlock[0] = (uint64_t)ceil(dispatchBlock[0] / 2.0);
 
-					resFFT = dispatchEnhanced(app, axis, dispatchBlock);
+					resFFT = dispatchEnhanced(app, axis, dispatchBlock, inverse);
 					if (resFFT != VKFFT_SUCCESS) return resFFT;
 					printDebugInformation(app, axis);
 					if ((!app->configuration.reorderFourStep) && (!app->useBluesteinFFT[1])) l = app->localFFTPlan_inverse->numAxisUploads[1] - 1 - l;
@@ -26559,7 +26656,7 @@ static inline VkFFTResult VkFFTAppend(VkFFTApplication* app, int inverse, VkFFTL
 				dispatchBlock[0] = (uint64_t)ceil(((app->configuration.size[0] / 2) * app->configuration.size[1] * app->configuration.size[2]) / (double)(2 * axis->axisBlock[0]));
 				dispatchBlock[1] = 1;
 				dispatchBlock[2] = app->configuration.coordinateFeatures * app->configuration.numberBatches;
-				resFFT = dispatchEnhanced(app, axis, dispatchBlock);
+				resFFT = dispatchEnhanced(app, axis, dispatchBlock, inverse);
 				if (resFFT != VKFFT_SUCCESS) return resFFT;
 				printDebugInformation(app, axis);
 
@@ -26601,7 +26698,7 @@ static inline VkFFTResult VkFFTAppend(VkFFTApplication* app, int inverse, VkFFTL
 				if (axis->specializationConstants.mergeSequencesR2C == 1) dispatchBlock[1] = (uint64_t)ceil(dispatchBlock[1] / 2.0);
 				//if (app->configuration.performZeropadding[1]) dispatchBlock[1] = (uint64_t)ceil(dispatchBlock[1] / 2.0);
 				//if (app->configuration.performZeropadding[2]) dispatchBlock[2] = (uint64_t)ceil(dispatchBlock[2] / 2.0);
-				resFFT = dispatchEnhanced(app, axis, dispatchBlock);
+				resFFT = dispatchEnhanced(app, axis, dispatchBlock, inverse);
 				if (resFFT != VKFFT_SUCCESS) return resFFT;
 				printDebugInformation(app, axis);
 				if ((!app->configuration.reorderFourStep) && (!app->useBluesteinFFT[0])) l = app->localFFTPlan_inverse->numAxisUploads[0] - 1 - l;
@@ -26643,7 +26740,7 @@ static inline VkFFTResult VkFFTAppend(VkFFTApplication* app, int inverse, VkFFTL
 					if (axis->specializationConstants.mergeSequencesR2C == 1) dispatchBlock[1] = (uint64_t)ceil(dispatchBlock[1] / 2.0);
 					//if (app->configuration.performZeropadding[1]) dispatchBlock[1] = (uint64_t)ceil(dispatchBlock[1] / 2.0);
 					//if (app->configuration.performZeropadding[2]) dispatchBlock[2] = (uint64_t)ceil(dispatchBlock[2] / 2.0);
-					resFFT = dispatchEnhanced(app, axis, dispatchBlock);
+					resFFT = dispatchEnhanced(app, axis, dispatchBlock, inverse);
 					if (resFFT != VKFFT_SUCCESS) return resFFT;
 					printDebugInformation(app, axis);
 					resFFT = VkFFTSync(app);

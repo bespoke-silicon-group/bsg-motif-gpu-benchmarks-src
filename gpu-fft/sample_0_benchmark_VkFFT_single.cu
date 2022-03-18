@@ -15,8 +15,8 @@
 #include <nvrtc.h>
 #include <cuda_runtime_api.h>
 #include <cuComplex.h>
-#include "vkFFT.h"
 #include "utils_VkFFT.h"
+int kernelCount = 0;
 
 VkFFTResult run_FFT_benchmark(VkGPU* vkGPU, uint64_t num, int num_execs = 1, int useLUT = 1)
 {
@@ -69,8 +69,10 @@ VkFFTResult run_FFT_benchmark(VkGPU* vkGPU, uint64_t num, int num_execs = 1, int
 			cudaStreamCreate(stream);
 			configuration[i].stream = stream;
 			configuration[i].useLUT = useLUT;
+			printf("Created stream\n");
 			//Initialize applications. This function loads shaders, creates pipeline and configures FFT based on configuration file. No buffer allocations inside VkFFT library.  
 			resFFT = initializeVkFFT(&app[i], configuration[i]);
+			fflush(stdout);
 			if (resFFT != VKFFT_SUCCESS) 
 				return resFFT;
 		}
@@ -134,7 +136,7 @@ VkFFTResult run_FFT_benchmark(VkGPU* vkGPU, uint64_t num, int num_execs = 1, int
 
 int main(int argc, char *argv[]) {
 	uint64_t num = 65536;
-	int streams = 64;
+	int streams = 2;
 	int useLUT = 1;
 	if(argc >= 2)
 		num = atoi(argv[1]);
@@ -145,6 +147,7 @@ int main(int argc, char *argv[]) {
 	VkGPU vkGPU;
 	cuCtxGetCurrent ( &vkGPU.context );
 	cuCtxGetDevice ( &vkGPU.device );
-	run_FFT_benchmark(&vkGPU, num, streams, useLUT);
+	VkFFTResult res = run_FFT_benchmark(&vkGPU, num, streams, useLUT);
+	printf("Result: %d\n", res);
 	return 0;
 }

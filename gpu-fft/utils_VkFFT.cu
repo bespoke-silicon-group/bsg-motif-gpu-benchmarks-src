@@ -38,7 +38,6 @@
 #include <CL/cl.h>
 #endif 
 #endif
-#include "vkFFT.h"
 #include "utils_VkFFT.h"
 #if(VKFFT_BACKEND==0)
 
