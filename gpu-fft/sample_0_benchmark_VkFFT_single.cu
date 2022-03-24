@@ -135,7 +135,7 @@ VkFFTResult run_FFT_benchmark(VkGPU* vkGPU, uint64_t num, int num_execs = 1, int
 }
 
 int main(int argc, char *argv[]) {
-	uint64_t num = 65536;
+	uint64_t num = 65536 / 4;
 	int streams = 2;
 	int useLUT = 1;
 	if(argc >= 2)
