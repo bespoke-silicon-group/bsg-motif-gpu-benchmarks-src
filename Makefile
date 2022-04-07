@@ -1,11 +1,11 @@
 BIN       ?= ./bin
-BINARIES  ?= ${BIN}/bfs ${BIN}/sssp ${BIN}/pr ${BIN}/bs ${BIN}/fft ${BIN}/spgemm ${BIN}/sgemm ${BIN}/aes
+BINARIES  ?= graphit_apps ${BIN}/bs ${BIN}/fft ${BIN}/spgemm ${BIN}/sgemm ${BIN}/aes ${BIN}/bh ${BIN}/sw ${BIN}/dmr
 CUDA_PATH ?= /usr/local/cuda-11/
 NVCC      ?= ${CUDA_PATH}/bin/nvcc
 
 .PHONY: all clean ${BINARIES}
 
-all: ${BINARIES} #Jacobi  HE BH DMR
+all: ${BINARIES} #Jacobi  HE
 
 ./${BIN}:
 	mkdir -p ${BIN}
@@ -73,6 +73,11 @@ ${BIN}/bh: | ./${BIN}
 	cd Galois/lonestar/scientific/gpu/barneshut; \
 	nvcc bh.cu -I./../../../../libgpu/include -I./../../../../external/moderngpu/src -I./../../../../external/cub ./../../../../libgpu/src/csr_graph.cu ./../../../../libgpu/src/ggc_rt.cu  -cudart shared -O3 -DNDEBUG  -arch=sm_70 --expt-extended-lambda -std=c++14 -DTHRUST_IGNORE_CUB_VERSION_CHECK -D_FORCE_INLINES  -lcudadevrt -lcudart -o bh; \
 	cp bh ../../../../../${BIN}
+
+${BIN}/dmr: | ./${BIN}
+	cd Galois/lonestar/scientific/gpu/delaunayrefinement; \
+	nvcc dmr.cu -I./../../../../libgpu/include -I./../../../../external/moderngpu/src -I./../../../../external/cub ./../../../../libgpu/src/csr_graph.cu ./../../../../libgpu/src/ggc_rt.cu  -cudart shared -O3 -DNDEBUG  -arch=sm_70 --expt-extended-lambda -std=c++14 -DTHRUST_IGNORE_CUB_VERSION_CHECK -D_FORCE_INLINES  -lcudadevrt -lcudart -o dmr; \
+	cp dmr ../../../../../${BIN}
 
 
 ${BIN}/sw: | ./${BIN}
