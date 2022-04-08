@@ -34,7 +34,7 @@ template <typename T>
 class ApproxBitset {
   int nbits;
   Shared<T> bitset;
-  cudaTextureObject_t btx;
+  void *btx;
   static const unsigned int bits_per_base = Base<T>::BITS,
                             divby         = Base<T>::LOG_BITS,
                             modby         = (1 << Base<T>::LOG_BITS) - 1;
@@ -76,7 +76,8 @@ public:
 
     resDesc.res.linear.devPtr      = bitarray;
     resDesc.res.linear.sizeInBytes = size;
-    check_cuda(cudaCreateTextureObject(&btx, &resDesc, &texDesc, NULL));
+    //check_cuda(cudaCreateTextureObject(&btx, &resDesc, &texDesc, NULL));
+    btx = bitarray;
   }
 
   __device__ void set(int pos) {
@@ -98,7 +99,8 @@ public:
 
     // return bitarray[elem] & (1 << bitpos);
     // return tex1Dfetch<unsigned int>(btx, elem) & (1 << bitpos);
-    if (!(tex1Dfetch<T>(btx, elem) & (1 << bitpos)))
+    //if (!(tex1Dfetch<T>(btx, elem) & (1 << bitpos)))
+    if (!(((T *)btx)[elem] & (1 << bitpos)))
       return bitarray[elem] & (1 << bitpos);
     else
       return 1;

@@ -110,17 +110,20 @@ unsigned CSRGraphTex::allocOnDevice(bool no_edge_data) {
 
     resDesc.res.linear.devPtr      = edge_dst;
     resDesc.res.linear.sizeInBytes = nedges * sizeof(index_type);
-    check_cuda(cudaCreateTextureObject(&edge_dst_tx, &resDesc, &texDesc, NULL));
+    //check_cuda(cudaCreateTextureObject(&edge_dst_tx, &resDesc, &texDesc, NULL));
+    edge_dst_tx = edge_dst;
 
     resDesc.res.linear.devPtr      = row_start;
     resDesc.res.linear.sizeInBytes = (nnodes + 1) * sizeof(index_type);
-    check_cuda(
-        cudaCreateTextureObject(&row_start_tx, &resDesc, &texDesc, NULL));
+    //check_cuda(
+    //    cudaCreateTextureObject(&row_start_tx, &resDesc, &texDesc, NULL));
+    row_start_tx = row_start;
 
     resDesc.res.linear.devPtr      = node_data;
     resDesc.res.linear.sizeInBytes = (nnodes) * sizeof(node_data_type);
-    check_cuda(
-        cudaCreateTextureObject(&node_data_tx, &resDesc, &texDesc, NULL));
+    //check_cuda(
+    //    cudaCreateTextureObject(&node_data_tx, &resDesc, &texDesc, NULL));
+    node_data_tx = node_data;
 
     return 1;
   }

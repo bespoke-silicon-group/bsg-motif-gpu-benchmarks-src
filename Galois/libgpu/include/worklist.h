@@ -544,7 +544,7 @@ struct Worklist2 : public Worklist {
 };
 
 struct WorklistT : public Worklist2 {
-  cudaTextureObject_t tx;
+  void *tx;
 
   WorklistT() : Worklist2() {}
 
@@ -565,17 +565,19 @@ struct WorklistT : public Worklist2 {
     texDesc.readMode = cudaReadModeElementType;
 
     // create texture object: we only have to do this once!
-    CUDA_SAFE_CALL(cudaCreateTextureObject(&tx, &resDesc, &texDesc, NULL));
+    //CUDA_SAFE_CALL(cudaCreateTextureObject(&tx, &resDesc, &texDesc, NULL));
+    tx = dwl;
   }
 
   void free() {
-    CUDA_SAFE_CALL(cudaDestroyTextureObject(tx));
+    //CUDA_SAFE_CALL(cudaDestroyTextureObject(tx));
     Worklist2::free();
   }
 
   __device__ int pop_id(int id, int& item) {
     if (id < *dindex) {
-      item = tex1Dfetch<int>(tx, id);
+      //item = tex1Dfetch<int>(tx, id);
+      item = ((int*)tx)[id];
       // item = cub::ThreadLoad<cub::LOAD_CG>(dwl + id);
       return 1;
     }
@@ -585,7 +587,8 @@ struct WorklistT : public Worklist2 {
 
   __device__ int pop_id_len(int id, int len, int& item) {
     if (id < len) {
-      item = tex1Dfetch<int>(tx, id);
+      //item = tex1Dfetch<int>(tx, id);
+      item = ((int*)tx)[id];
       // item = cub::ThreadLoad<cub::LOAD_CG>(dwl + id);
       return 1;
     }
