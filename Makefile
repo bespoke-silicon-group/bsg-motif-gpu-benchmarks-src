@@ -32,6 +32,12 @@ ${BIN}/bfs: | ./${BIN}
 	cmake .. &&	$(MAKE) -j bfs; \
 	cp bin/bfs ../../${BIN}/
 
+
+${BIN}/bfs_chai: | ./${BIN}
+	cd chai/CUDA-D/BFS/; \
+	make; \
+	cp bfs ../../../${BIN}/bfs_chai;
+
 ${BIN}/sssp: | ./${BIN}
 	cd gunrock; \
 	mkdir -p build; \
