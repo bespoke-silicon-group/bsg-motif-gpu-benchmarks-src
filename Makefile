@@ -71,12 +71,12 @@ ${BIN}/aes: | ./${BIN}
 
 ${BIN}/bh: | ./${BIN}
 	cd Galois/lonestar/scientific/gpu/barneshut; \
-	nvcc bh.cu -I./../../../../libgpu/include -I./../../../../external/moderngpu/src -I./../../../../external/cub ./../../../../libgpu/src/csr_graph.cu ./../../../../libgpu/src/ggc_rt.cu  -cudart shared -O3 -DNDEBUG  -arch=sm_70 --expt-extended-lambda -std=c++14 -DTHRUST_IGNORE_CUB_VERSION_CHECK -D_FORCE_INLINES  -lcudadevrt -lcudart -o bh; \
+	$(NVCC) bh.cu -I./../../../../libgpu/include -I./../../../../external/moderngpu/src -I./../../../../external/cub ./../../../../libgpu/src/csr_graph.cu ./../../../../libgpu/src/ggc_rt.cu  -cudart shared -O3 -DNDEBUG  -arch=sm_70 --expt-extended-lambda -std=c++14 -DTHRUST_IGNORE_CUB_VERSION_CHECK -D_FORCE_INLINES  -lcudadevrt -lcudart -o bh; \
 	cp bh ../../../../../${BIN}
 
 ${BIN}/dmr: | ./${BIN}
 	cd Galois/lonestar/scientific/gpu/delaunayrefinement; \
-	nvcc dmr.cu -I./../../../../libgpu/include -I./../../../../external/moderngpu/src -I./../../../../external/cub ./../../../../libgpu/src/csr_graph.cu ./../../../../libgpu/src/ggc_rt.cu  -cudart shared -O3 -DNDEBUG  -arch=sm_70 --expt-extended-lambda -std=c++14 -DTHRUST_IGNORE_CUB_VERSION_CHECK -D_FORCE_INLINES  -lcudadevrt -lcudart -o dmr; \
+	$(NVCC) dmr.cu -I./../../../../libgpu/include -I./../../../../external/moderngpu/src -I./../../../../external/cub ./../../../../libgpu/src/csr_graph.cu ./../../../../libgpu/src/ggc_rt.cu  -cudart shared -O3 -DNDEBUG  -arch=sm_70 --expt-extended-lambda -std=c++14 -DTHRUST_IGNORE_CUB_VERSION_CHECK -D_FORCE_INLINES  -lcudadevrt -lcudart -o dmr; \
 	cp dmr ../../../../../${BIN}
 
 
