@@ -37,12 +37,12 @@
 #include <atomic>
 #include "support/common.h"
 
-void run_cpu_threads(Node *graph_nodes_av, Edge *graph_edges_av, std::atomic_llong *cost, std::atomic_llong *color,
-    ll *q1, ll *q2, ll *t, std::atomic_llong *head, std::atomic_llong *tail,
-    std::atomic_llong *threads_end, std::atomic_llong *threads_run, std::atomic_llong *iter, ll cpu_threads,
-    ll LIMIT, const ll GPU);
+void run_cpu_threads(Node *graph_nodes_av, Edge *graph_edges_av, std::atomic_int *cost, std::atomic_int *color,
+    int *q1, int *q2, int *t, std::atomic_int *head, std::atomic_int *tail,
+    std::atomic_int *threads_end, std::atomic_int *threads_run, std::atomic_int *iter, int cpu_threads,
+    int LIMIT, const int GPU);
 
-cudaError_t call_BFS_gpu(ll blocks, ll threads, Node *graph_nodes_av, Edge *graph_edges_av, ll *cost,
-    ll *color, ll *q1, ll *q2, ll *n_t,
-    ll *head, ll *tail, ll *threads_end, ll *threads_run,
-		ll *overflow, ll *iter, ll LIMIT, const ll CPU, ll l_mem_size);
+cudaError_t call_BFS_gpu(int blocks, int threads, Node *graph_nodes_av, Edge *graph_edges_av, int *cost,
+    int *color, int *q1, int *q2, int *n_t,
+    int *head, int *tail, int *threads_end, int *threads_run,
+		int *overflow, int *iter, int LIMIT, const int CPU, int l_mem_size);

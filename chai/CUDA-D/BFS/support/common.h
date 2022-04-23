@@ -38,7 +38,6 @@
 
 #define PRINT 0
 #define PRINT_ALL 0
-#define ll long long
 
 #define INF -2147483647
 #define UP_LIMIT 16677216 //2^24
@@ -50,12 +49,12 @@
 #define W_QUEUE_SIZE 3200
 
 typedef struct {
-    ll x;
-    ll y;
+    int x;
+    int y;
 } Node;
 typedef struct {
-    ll x;
-    ll y;
+    int x;
+    int y;
 } Edge;
 
 #endif

@@ -46,20 +46,20 @@
 // Params ---------------------------------------------------------------------
 struct Params {
 
-    ll         device;
-    ll         n_gpu_threads;
-    ll         n_gpu_blocks;
-    ll         n_threads;
-    ll         n_warmup;
-    ll         n_reps;
+    int         device;
+    int         n_gpu_threads;
+    int         n_gpu_blocks;
+    int         n_threads;
+    int         n_warmup;
+    int         n_reps;
     const char *file_name;
     const char *comparison_file;
-    ll         switching_limit;
+    int         switching_limit;
 
     Params(int argc, char **argv) {
         device          = 0;
-        n_gpu_threads    = 512;
-        n_gpu_blocks   = 320;
+        n_gpu_threads    = 256;
+        n_gpu_blocks   = 640;
         n_threads       = 0;
         n_warmup        = 0;
         n_reps          = 1;
@@ -115,43 +115,43 @@ struct Params {
 };
 
 // Input Data -----------------------------------------------------------------
-void read_input_size(ll &n_nodes, ll &n_edges, const Params &p) {
+void read_input_size(int &n_nodes, int &n_edges, const Params &p) {
     FILE *fp = fopen(p.file_name, "r");
-    fscanf(fp, "%lld", &n_nodes);
-    fscanf(fp, "%lld", &n_edges);
+    fscanf(fp, "%d", &n_nodes);
+    fscanf(fp, "%d", &n_edges);
     if(fp)
         fclose(fp);
 }
 
-void read_input(ll &source, Node *&h_nodes, Edge *&h_edges, const Params &p) {
+void read_input(int &source, Node *&h_nodes, Edge *&h_edges, const Params &p) {
 
-    ll   start, edgeno;
-    ll   n_nodes, n_edges;
-    ll   id, cost;
+    int   start, edgeno;
+    int   n_nodes, n_edges;
+    int   id, cost;
     FILE *fp = fopen(p.file_name, "r");
 
-    fscanf(fp, "%lld", &n_nodes);
-    fscanf(fp, "%lld", &n_edges);
-    fscanf(fp, "%lld", &source);
-    printf("Number of nodes = %lld\t", n_nodes);
-    printf("Number of edges = %lld\t", n_edges);
+    fscanf(fp, "%d", &n_nodes);
+    fscanf(fp, "%d", &n_edges);
+    fscanf(fp, "%d", &source);
+    printf("Number of nodes = %d\t", n_nodes);
+    printf("Number of edges = %d\t", n_edges);
 
     // initalize the memory: Nodes
-    for(ll i = 0; i < n_nodes; i++) {
-        fscanf(fp, "%lld %lld", &start, &edgeno);
+    for(int i = 0; i < n_nodes; i++) {
+        fscanf(fp, "%d %d", &start, &edgeno);
         h_nodes[i].x = start;
         h_nodes[i].y = edgeno;
     }
 #if PRINT_ALL
-    for(ll i = 0; i < n_nodes; i++) {
+    for(int i = 0; i < n_nodes; i++) {
         printf("%d, %d\n", h_nodes[i].x, h_nodes[i].y);
     }
 #endif
 
     // initalize the memory: Edges
-    for(ll i = 0; i < n_edges; i++) {
-        fscanf(fp, "%lld", &id);
-        fscanf(fp, "%lld", &cost);
+    for(int i = 0; i < n_edges; i++) {
+        fscanf(fp, "%d", &id);
+        fscanf(fp, "%d", &cost);
         h_edges[i].x = id;
         h_edges[i].y = -cost;
     }
@@ -168,7 +168,7 @@ int main(int argc, char **argv) {
     cudaError_t  cudaStatus;
 
     // Allocate
-    ll n_nodes, n_edges;
+    int n_nodes, n_edges;
     read_input_size(n_nodes, n_edges, p);
     timer.start("Allocation");
     Node * h_nodes = (Node *)malloc(sizeof(Node) * n_nodes);
@@ -177,39 +177,39 @@ int main(int argc, char **argv) {
     Edge * h_edges = (Edge *)malloc(sizeof(Edge) * n_edges);
 		Edge * d_edges;
     cudaStatus = cudaMalloc((void**)&d_edges, sizeof(Edge) * n_edges);
-    std::atomic_llong *h_color = (std::atomic_llong *)malloc(sizeof(std::atomic_llong) * n_nodes);
-		ll * d_color;
-    cudaStatus = cudaMalloc((void**)&d_color, sizeof(ll) * n_nodes);
-    std::atomic_llong *h_cost  = (std::atomic_llong *)malloc(sizeof(std::atomic_llong) * n_nodes);
-		ll * d_cost;
-    cudaStatus = cudaMalloc((void**)&d_cost, sizeof(ll) * n_nodes);
-    ll *            h_q1    = (ll *)malloc(n_nodes * sizeof(ll));
-		ll * d_q1;
-    cudaStatus = cudaMalloc((void**)&d_q1, sizeof(ll) * n_nodes);
-    ll *            h_q2    = (ll *)malloc(n_nodes * sizeof(ll));
-		ll * d_q2;
-    cudaStatus = cudaMalloc((void**)&d_q2, sizeof(ll) * n_nodes);
-    std::atomic_llong  h_head[1];
-		ll * d_head;
-    cudaStatus = cudaMalloc((void**)&d_head, sizeof(ll));
-    std::atomic_llong  h_tail[1];
-		ll * d_tail;
-    cudaStatus = cudaMalloc((void**)&d_tail, sizeof(ll));
-    std::atomic_llong  h_threads_end[1];
-		ll * d_threads_end;
-    cudaStatus = cudaMalloc((void**)&d_threads_end, sizeof(ll));
-    std::atomic_llong  h_threads_run[1];
-		ll * d_threads_run;
-    cudaStatus = cudaMalloc((void**)&d_threads_run, sizeof(ll));
-    ll              h_num_t[1];
-		ll * d_num_t;
-    cudaStatus = cudaMalloc((void**)&d_num_t, sizeof(ll));
-    ll              h_overflow[1];
-		ll * d_overflow;
-    cudaStatus = cudaMalloc((void**)&d_overflow, sizeof(ll));
-    std::atomic_llong  h_iter[1];
-		ll * d_iter;
-    cudaStatus = cudaMalloc((void**)&d_iter, sizeof(ll));
+    std::atomic_int *h_color = (std::atomic_int *)malloc(sizeof(std::atomic_int) * n_nodes);
+		int * d_color;
+    cudaStatus = cudaMalloc((void**)&d_color, sizeof(int) * n_nodes);
+    std::atomic_int *h_cost  = (std::atomic_int *)malloc(sizeof(std::atomic_int) * n_nodes);
+		int * d_cost;
+    cudaStatus = cudaMalloc((void**)&d_cost, sizeof(int) * n_nodes);
+    int *            h_q1    = (int *)malloc(n_nodes * sizeof(int));
+		int * d_q1;
+    cudaStatus = cudaMalloc((void**)&d_q1, sizeof(int) * n_nodes);
+    int *            h_q2    = (int *)malloc(n_nodes * sizeof(int));
+		int * d_q2;
+    cudaStatus = cudaMalloc((void**)&d_q2, sizeof(int) * n_nodes);
+    std::atomic_int  h_head[1];
+		int * d_head;
+    cudaStatus = cudaMalloc((void**)&d_head, sizeof(int));
+    std::atomic_int  h_tail[1];
+		int * d_tail;
+    cudaStatus = cudaMalloc((void**)&d_tail, sizeof(int));
+    std::atomic_int  h_threads_end[1];
+		int * d_threads_end;
+    cudaStatus = cudaMalloc((void**)&d_threads_end, sizeof(int));
+    std::atomic_int  h_threads_run[1];
+		int * d_threads_run;
+    cudaStatus = cudaMalloc((void**)&d_threads_run, sizeof(int));
+    int              h_num_t[1];
+		int * d_num_t;
+    cudaStatus = cudaMalloc((void**)&d_num_t, sizeof(int));
+    int              h_overflow[1];
+		int * d_overflow;
+    cudaStatus = cudaMalloc((void**)&d_overflow, sizeof(int));
+    std::atomic_int  h_iter[1];
+		int * d_iter;
+    cudaStatus = cudaMalloc((void**)&d_iter, sizeof(int));
     ALLOC_ERR(h_nodes, h_edges, h_color, h_cost, h_q1, h_q2);
     CUDA_ERR();
     cudaDeviceSynchronize();
@@ -217,14 +217,14 @@ int main(int argc, char **argv) {
 
     // Initialize
     timer.start("Initialization");
-    const ll max_gpu_threads = setcuda.max_gpu_threads();
-    ll source;
+    const int max_gpu_threads = setcuda.max_gpu_threads();
+    int source;
     read_input(source, h_nodes, h_edges, p);
-    for(ll i = 0; i < n_nodes; i++) {
+    for(int i = 0; i < n_nodes; i++) {
         h_cost[i].store(INF);
     }
     h_cost[source].store(0);
-    for(ll i = 0; i < n_nodes; i++) {
+    for(int i = 0; i < n_nodes; i++) {
         h_color[i].store(WHITE);
     }
     h_tail[0].store(0);
@@ -248,14 +248,14 @@ int main(int argc, char **argv) {
     CUDA_ERR();
     timer.stop("Copy To Device");
 
-    for(ll rep = 0; rep < p.n_reps + p.n_warmup; rep++) {
+    for(int rep = 0; rep < p.n_reps + p.n_warmup; rep++) {
 
         // Reset
-        for(ll i = 0; i < n_nodes; i++) {
+        for(int i = 0; i < n_nodes; i++) {
             h_cost[i].store(INF);
         }
         h_cost[source].store(0);
-        for(ll i = 0; i < n_nodes; i++) {
+        for(int i = 0; i < n_nodes; i++) {
             h_color[i].store(WHITE);
         }
         h_tail[0].store(0);
@@ -271,13 +271,14 @@ int main(int argc, char **argv) {
             timer.start("Kernel");
 
         // Run first iteration in master CPU thread
-        ll pid;
-        ll index_i, index_o;
+        h_num_t[0] = 1;
+        int pid;
+        int index_i, index_o;
         for(index_i = 0; index_i < h_num_t[0]; index_i++) {
             pid = h_q1[index_i];
             h_color[pid].store(BLACK);
-            for(ll i = h_nodes[pid].x; i < (h_nodes[pid].y + h_nodes[pid].x); i++) {
-                ll id = h_edges[i].x;
+            for(int i = h_nodes[pid].x; i < (h_nodes[pid].y + h_nodes[pid].x); i++) {
+                int id = h_edges[i].x;
                 h_color[id].store(BLACK);
                 index_o       = h_tail[0].fetch_add(1);
                 h_q2[index_o] = id;
@@ -291,13 +292,13 @@ int main(int argc, char **argv) {
             timer.stop("Kernel");
 		*/
         // Pointers to input and output queues
-        ll * h_qin  = h_q2;
-        ll * h_qout = h_q1;
-        ll * d_qin  = d_q2;
-        ll * d_qout = d_q1;
+        int * h_qin  = h_q2;
+        int * h_qout = h_q1;
+        int * d_qin  = d_q2;
+        int * d_qout = d_q1;
 
-        const ll CPU_EXEC = (p.n_threads > 0) ? 1 : 0;
-        const ll GPU_EXEC = (p.n_gpu_blocks > 0 && p.n_gpu_threads > 0) ? 1 : 0;
+        const int CPU_EXEC = (p.n_threads > 0) ? 1 : 0;
+        const int GPU_EXEC = (p.n_gpu_blocks > 0 && p.n_gpu_threads > 0) ? 1 : 0;
 
         // Run subsequent iterations on CPU or GPU until number of input queue elements is 0
         while(*h_num_t != 0) {
@@ -339,21 +340,21 @@ int main(int argc, char **argv) {
                 if(rep >= p.n_warmup)
                     timer.start("Copy To Device");
                 cudaStatus = cudaMemcpy(
-                    d_cost, h_cost, sizeof(ll) * n_nodes, cudaMemcpyHostToDevice);
+                    d_cost, h_cost, sizeof(int) * n_nodes, cudaMemcpyHostToDevice);
                 cudaStatus = cudaMemcpy(
-                    d_color, h_color, sizeof(ll) * n_nodes, cudaMemcpyHostToDevice);
+                    d_color, h_color, sizeof(int) * n_nodes, cudaMemcpyHostToDevice);
                 cudaStatus = cudaMemcpy(
-                    d_threads_run, h_threads_run, sizeof(ll), cudaMemcpyHostToDevice);
+                    d_threads_run, h_threads_run, sizeof(int), cudaMemcpyHostToDevice);
                 cudaStatus = cudaMemcpy(
-                    d_threads_end, h_threads_end, sizeof(ll), cudaMemcpyHostToDevice);
+                    d_threads_end, h_threads_end, sizeof(int), cudaMemcpyHostToDevice);
                 cudaStatus = cudaMemcpy(
-                    d_overflow, h_overflow, sizeof(ll), cudaMemcpyHostToDevice);
+                    d_overflow, h_overflow, sizeof(int), cudaMemcpyHostToDevice);
                 cudaStatus = cudaMemcpy(
-                    d_q1, h_q1, sizeof(ll) * n_nodes, cudaMemcpyHostToDevice);
+                    d_q1, h_q1, sizeof(int) * n_nodes, cudaMemcpyHostToDevice);
                 cudaStatus = cudaMemcpy(
-                    d_q2, h_q2, sizeof(ll) * n_nodes, cudaMemcpyHostToDevice);
+                    d_q2, h_q2, sizeof(int) * n_nodes, cudaMemcpyHostToDevice);
                 cudaStatus = cudaMemcpy(
-                    d_iter, h_iter, sizeof(ll), cudaMemcpyHostToDevice);
+                    d_iter, h_iter, sizeof(int), cudaMemcpyHostToDevice);
                 cudaDeviceSynchronize();
                 CUDA_ERR();
                 if(rep >= p.n_warmup)
@@ -375,11 +376,11 @@ int main(int argc, char **argv) {
                     if(rep >= p.n_warmup)
                         timer.start("Copy To Device");
                     cudaStatus = cudaMemcpy(
-                        d_num_t, h_num_t, sizeof(ll), cudaMemcpyHostToDevice);
+                        d_num_t, h_num_t, sizeof(int), cudaMemcpyHostToDevice);
                     cudaStatus = cudaMemcpy(
-                        d_tail, h_tail, sizeof(ll), cudaMemcpyHostToDevice);
+                        d_tail, h_tail, sizeof(int), cudaMemcpyHostToDevice);
                     cudaStatus = cudaMemcpy(
-                        d_head, h_head, sizeof(ll), cudaMemcpyHostToDevice);
+                        d_head, h_head, sizeof(int), cudaMemcpyHostToDevice);
                     cudaDeviceSynchronize();
                     CUDA_ERR();
                     if(rep >= p.n_warmup)
@@ -390,12 +391,12 @@ int main(int argc, char **argv) {
                     assert(p.n_gpu_threads <= max_gpu_threads && 
                         "The thread block size is greater than the maximum thread block size that can be used on this device");
                     
-                    ll threadblocks = min(p.n_gpu_blocks, (*h_num_t + p.n_gpu_threads - 1) / p.n_gpu_threads);
+                    int threadblocks = min(p.n_gpu_blocks, (*h_num_t + p.n_gpu_threads - 1) / p.n_gpu_threads);
                     
                     cudaStatus = call_BFS_gpu(threadblocks, p.n_gpu_threads, d_nodes, d_edges, d_cost,
                         d_color, d_qin, d_qout, d_num_t,
                         d_head, d_tail, d_threads_end, d_threads_run,
-                    		d_overflow, d_iter, p.switching_limit, CPU_EXEC, sizeof(ll) * (W_QUEUE_SIZE + 3));
+                    		d_overflow, d_iter, p.switching_limit, CPU_EXEC, sizeof(int) * (W_QUEUE_SIZE + 5));
                     cudaDeviceSynchronize();
                     CUDA_ERR();
                     if(rep >= p.n_warmup)
@@ -404,9 +405,9 @@ int main(int argc, char **argv) {
                     if(rep >= p.n_warmup)
                         timer.start("Copy Back and Merge");
                     cudaStatus = cudaMemcpy(
-                        h_tail, d_tail, sizeof(ll), cudaMemcpyDeviceToHost);
+                        h_tail, d_tail, sizeof(int), cudaMemcpyDeviceToHost);
                     cudaStatus = cudaMemcpy(
-                        h_iter, d_iter, sizeof(ll), cudaMemcpyDeviceToHost);
+                        h_iter, d_iter, sizeof(int), cudaMemcpyDeviceToHost);
                     cudaDeviceSynchronize();
                     CUDA_ERR();
                     if(rep >= p.n_warmup)
@@ -415,25 +416,25 @@ int main(int argc, char **argv) {
                     h_num_t[0] = h_tail[0].load(); // Number of elements in output queue
                     h_tail[0].store(0);
                     h_head[0].store(0);
-                    printf("%d\tvisited\t%lld\n", ++iter, h_num_t[0]);
+                    printf("%d\tvisited\t%d\n", ++iter, h_num_t[0]);
                 }
 
                 if(rep >= p.n_warmup)
                     timer.start("Copy Back and Merge");
                 cudaStatus = cudaMemcpy(
-                    h_cost, d_cost, sizeof(ll) * n_nodes, cudaMemcpyDeviceToHost);
+                    h_cost, d_cost, sizeof(int) * n_nodes, cudaMemcpyDeviceToHost);
                 cudaStatus = cudaMemcpy(
-                    h_color, d_color, sizeof(ll) * n_nodes, cudaMemcpyDeviceToHost);
+                    h_color, d_color, sizeof(int) * n_nodes, cudaMemcpyDeviceToHost);
                 cudaStatus = cudaMemcpy(
-                    h_threads_run, d_threads_run, sizeof(ll), cudaMemcpyDeviceToHost);
+                    h_threads_run, d_threads_run, sizeof(int), cudaMemcpyDeviceToHost);
                 cudaStatus = cudaMemcpy(
-                    h_threads_end, d_threads_end, sizeof(ll), cudaMemcpyDeviceToHost);
+                    h_threads_end, d_threads_end, sizeof(int), cudaMemcpyDeviceToHost);
                 cudaStatus = cudaMemcpy(
-                    h_overflow, d_overflow, sizeof(ll), cudaMemcpyDeviceToHost);
+                    h_overflow, d_overflow, sizeof(int), cudaMemcpyDeviceToHost);
                 cudaStatus = cudaMemcpy(
-                    h_q1, d_q1, sizeof(ll) * n_nodes, cudaMemcpyDeviceToHost);
+                    h_q1, d_q1, sizeof(int) * n_nodes, cudaMemcpyDeviceToHost);
                 cudaStatus = cudaMemcpy(
-                    h_q2, d_q2, sizeof(ll) * n_nodes, cudaMemcpyDeviceToHost);
+                    h_q2, d_q2, sizeof(int) * n_nodes, cudaMemcpyDeviceToHost);
                 cudaDeviceSynchronize();
                 CUDA_ERR();
                 if(rep >= p.n_warmup)

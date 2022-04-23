@@ -40,94 +40,114 @@
 #include <stdio.h>
 #include <assert.h>
 
-// CUDA kernel ------------------------------------------------------------------------------------------
-__global__ void BFS_gpu(Node *graph_nodes_av, Edge *graph_edges_av, ll *cost,
-    ll *color, ll *q1, ll *q2, ll *n_t,
-    ll *head, ll *tail, ll *threads_end, ll *threads_run,
-    ll *overflow, ll *iter, ll LIMIT, const ll CPU) {
-
-    extern __shared__ ll l_mem[];
-    ll* tail_bin = l_mem;
-    ll* l_q2 = (ll*)&tail_bin[1];
-    ll* shift = (ll*)&l_q2[W_QUEUE_SIZE];
-    ll* base = (ll*)&shift[1];
-
-    const ll tid     = threadIdx.x;
-    const ll gtid    = blockIdx.x * blockDim.x + threadIdx.x;
-    const ll MAXWG   = gridDim.x;
-    const ll WG_SIZE = blockDim.x;
-
-    ll iter_local = atomicAdd((ull*)&iter[0], 0);
-
-    ll n_t_local = atomicAdd((ull*)n_t, 0);
-
-    if(tid == 0) {
-        // Reset queue
-        *tail_bin = 0;
-    }
-
-    // Fetch frontier elements from the queue
-    if(tid == 0) {
-        *base = atomicAdd((ull*)&head[0], WG_SIZE);
-    }
-    __syncthreads();
-
-    ll my_base = *base;
-    while(my_base < n_t_local) {
-        if(my_base + tid < n_t_local && *overflow == 0) {
-            // Visit a node from the current frontier
-            ll pid = q1[my_base + tid];
-            //////////////// Visit node ///////////////////////////
-            atomicExch((ull*)&cost[pid], iter_local); // Node visited
-            Node cur_node;
-            cur_node.x = graph_nodes_av[pid].x;
-            cur_node.y = graph_nodes_av[pid].y;
-            // For each outgoing edge
-            for(ll i = cur_node.x; i < cur_node.y + cur_node.x; i++) {
-                ll id        = graph_edges_av[i].x;
-                ll old_color = atomicMax((ull*)&color[id], BLACK);
-                if(old_color < BLACK) {
-                    // Push to the queue
-                    ll tail_index = atomicAdd((ull*)tail_bin, 1);
-                    if(tail_index >= W_QUEUE_SIZE) {
-                        *overflow = 1;
-                        //printf("OVERFLOW\n");
-                        assert(false);
-                    } else
-                        l_q2[tail_index] = id;
-                }
-            }
-        }
-        if(tid == 0) {
-            *base = atomicAdd((ull*)&head[0], WG_SIZE); // Fetch more frontier elements from the queue
-        }
-        __syncthreads();
-        my_base = *base;
-    }
-    /////////////////////////////////////////////////////////
+__device__ bool shift_to_global(int *shift, int *tail, int *tail_bin, int *q2, int *l_q2, int *count) {
+    const int tid     = threadIdx.x;
+    const int WG_SIZE = blockDim.x;
+	/////////////////////////////////////////////////////////
     // Compute size of the output and allocate space in the global queue
+    __syncthreads();
+    bool ret = *count;
     if(tid == 0) {
-        *shift = atomicAdd((ull*)&tail[0], *tail_bin);
+        *shift = atomicAdd(&tail[0], min(*tail_bin, W_QUEUE_SIZE));
     }
     __syncthreads();
     ///////////////////// CONCATENATE INTO GLOBAL MEMORY /////////////////////
-    ll local_shift = tid;
-    while(local_shift < *tail_bin) {
+    int local_shift = tid;
+    while(local_shift < min(*tail_bin, W_QUEUE_SIZE)) {
         q2[*shift + local_shift] = l_q2[local_shift];
         // Multiple threads are copying elements at the same time, so we shift by multiple elements for next iteration
         local_shift += WG_SIZE;
     }
+    __syncthreads();
+    if(tid == 0) {
+    	*count = 0;
+    	*tail_bin = 0;
+    }
+    __syncthreads();
+    return ret;
     //////////////////////////////////////////////////////////////////////////
+}
+
+// CUDA kernel ------------------------------------------------------------------------------------------
+__global__ void BFS_gpu(Node *graph_nodes_av, Edge *graph_edges_av, int *cost,
+    int *color, int *q1, int *q2, int *n_t,
+    int *head, int *tail, int *threads_end, int *threads_run,
+    int *overflow, int *iter, int LIMIT, const int CPU) {
+
+    extern __shared__ int l_mem[];
+    int* tail_bin = l_mem;
+    int* l_q2 = (int*)&tail_bin[1];
+    int* shift = (int*)&l_q2[W_QUEUE_SIZE];
+    int* base = (int*)&shift[1];
+    int* count = (int*)&base[1];
+
+    const int tid     = threadIdx.x;
+    const int gtid    = blockIdx.x * blockDim.x + threadIdx.x;
+    const int MAXWG   = gridDim.x;
+    const int WG_SIZE = blockDim.x;
+
+    int iter_local = atomicAdd(&iter[0], 0);
+
+    int n_t_local = atomicAdd(n_t, 0);
+
+    if(tid == 0) {
+        // Reset queue
+        *tail_bin = 0;
+        *count = 0;
+    }
+
+    // Fetch frontier elements from the queue
+    if(tid == 0)
+        *base = atomicAdd(&head[0], WG_SIZE);
+    __syncthreads();
+
+    int my_base = *base;
+    while(my_base < n_t_local) {
+        if(my_base + tid < n_t_local && *overflow == 0) {
+            // Visit a node from the current frontier
+            int pid = q1[my_base + tid];
+            //////////////// Visit node ///////////////////////////
+            atomicExch(&cost[pid], iter_local); // Node visited
+            Node cur_node;
+            cur_node.x = graph_nodes_av[pid].x;
+            cur_node.y = graph_nodes_av[pid].y;
+            // For each outgoing edge
+            for(int i = cur_node.x; i < cur_node.y + cur_node.x; i++) {
+                int id        = graph_edges_av[i].x;
+                int old_color = atomicMax(&color[id], BLACK);
+                if(old_color < BLACK) {
+                    // Push to the queue
+                    int tail_index = atomicAdd(tail_bin, 1);
+                    while(tail_index >= W_QUEUE_SIZE) {
+                    	*count = 1;
+                    	shift_to_global(shift, tail, tail_bin, q2, l_q2, count);
+                        //*overflow = 1;
+                        tail_index = atomicAdd(tail_bin, 1);
+                        //printf("OVERFLOW\n");
+                        //assert(false);
+                    }
+                    l_q2[tail_index] = id;
+                }
+            }
+        }
+		while(shift_to_global(shift, tail, tail_bin, q2, l_q2, count));
+        if(tid == 0)
+            *base = atomicAdd(&head[0], WG_SIZE); // Fetch more frontier elements from the queue
+        __syncthreads();
+        my_base = *base;
+    }
+    
+    while(shift_to_global(shift, tail, tail_bin, q2, l_q2, count));
 
     if(gtid == 0) {
-        atomicAdd((ull*)&iter[0], 1);
+        atomicAdd(&iter[0], 1);
     }
 }
 
-cudaError_t call_BFS_gpu(ll blocks, ll threads, Node *graph_nodes_av, Edge *graph_edges_av, ll *cost,
-    ll *color, ll *q1, ll *q2, ll *n_t,
-    ll *head, ll *tail, ll *threads_end, ll *threads_run,
-    ll *overflow, ll *iter, ll LIMIT, const ll CPU, ll l_mem_size){
+cudaError_t call_BFS_gpu(int blocks, int threads, Node *graph_nodes_av, Edge *graph_edges_av, int *cost,
+    int *color, int *q1, int *q2, int *n_t,
+    int *head, int *tail, int *threads_end, int *threads_run,
+    int *overflow, int *iter, int LIMIT, const int CPU, int l_mem_size){
 
     dim3 dimGrid(blocks);
     dim3 dimBlock(threads);
