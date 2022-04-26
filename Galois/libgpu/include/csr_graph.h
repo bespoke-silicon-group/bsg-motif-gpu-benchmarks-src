@@ -155,7 +155,7 @@ struct CSRGraphTex : CSRGraph {
     //       tex1Dfetch<index_type>(row_start_tx, src);
     index_type t1, t2;
     t1 = ((index_type *)row_start_tx)[src + 1];
-    t1 = ((index_type *)row_start_tx)[src];
+    t2 = ((index_type *)row_start_tx)[src];
     return t1 - t2;
 #else
     return CSRGraph::getOutDegree(src);
