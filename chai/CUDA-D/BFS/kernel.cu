@@ -36,17 +36,18 @@
 #define _CUDA_COMPILER_
 
 #include "support/common.h"
-#define ull unsigned long long
 #include <stdio.h>
 #include <assert.h>
 
-__device__ bool shift_to_global(int *shift, int *tail, int *tail_bin, int *q2, int *l_q2, int *count) {
+__device__ __noinline__ bool shift_to_global(int *shift, int *tail, int *tail_bin, int *q2, int *l_q2, int *count, bool force = false) {
     const int tid     = threadIdx.x;
     const int WG_SIZE = blockDim.x;
 	/////////////////////////////////////////////////////////
     // Compute size of the output and allocate space in the global queue
     __syncthreads();
     bool ret = *count;
+    if(!ret && !force)
+    	return ret;
     if(tid == 0) {
         *shift = atomicAdd(&tail[0], min(*tail_bin, W_QUEUE_SIZE));
     }
@@ -137,7 +138,7 @@ __global__ void BFS_gpu(Node *graph_nodes_av, Edge *graph_edges_av, int *cost,
         my_base = *base;
     }
     
-    while(shift_to_global(shift, tail, tail_bin, q2, l_q2, count));
+    while(shift_to_global(shift, tail, tail_bin, q2, l_q2, count, true));
 
     if(gtid == 0) {
         atomicAdd(&iter[0], 1);
