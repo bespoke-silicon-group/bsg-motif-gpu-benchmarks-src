@@ -392,7 +392,6 @@ int main(int argc, char **argv) {
                         "The thread block size is greater than the maximum thread block size that can be used on this device");
                     
                     int threadblocks = min(p.n_gpu_blocks, (*h_num_t + p.n_gpu_threads - 1) / p.n_gpu_threads);
-                    
                     cudaStatus = call_BFS_gpu(threadblocks, p.n_gpu_threads, d_nodes, d_edges, d_cost,
                         d_color, d_qin, d_qout, d_num_t,
                         d_head, d_tail, d_threads_end, d_threads_run,

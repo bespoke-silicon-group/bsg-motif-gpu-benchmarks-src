@@ -39,30 +39,32 @@
 #include <stdio.h>
 #include <assert.h>
 
-__device__ __noinline__ bool shift_to_global(int *shift, int *tail, int *tail_bin, int *q2, int *l_q2, int *count, bool force = false) {
-    const int tid     = threadIdx.x;
+__device__ __noinline__ bool shift_to_global(int *shift, int *tail, int *tail_bin, int *q2, int *l_q2, int *count, int *reached) {
     const int WG_SIZE = blockDim.x;
 	/////////////////////////////////////////////////////////
     // Compute size of the output and allocate space in the global queue
     __syncthreads();
+    int size = *tail_bin;
     bool ret = *count;
-    if(!ret && !force)
+    if(!ret)
     	return ret;
+    int tid = atomicAdd(reached, 1); // Hacky. Needed for GPGPU-Sim
     if(tid == 0) {
-        *shift = atomicAdd(&tail[0], min(*tail_bin, W_QUEUE_SIZE));
+        *shift = atomicAdd(&tail[0], min(size, W_QUEUE_SIZE));
     }
     __syncthreads();
     ///////////////////// CONCATENATE INTO GLOBAL MEMORY /////////////////////
     int local_shift = tid;
-    while(local_shift < min(*tail_bin, W_QUEUE_SIZE)) {
+    while(local_shift < min(size, W_QUEUE_SIZE)) {
         q2[*shift + local_shift] = l_q2[local_shift];
         // Multiple threads are copying elements at the same time, so we shift by multiple elements for next iteration
-        local_shift += WG_SIZE;
+        local_shift += *reached;
     }
     __syncthreads();
     if(tid == 0) {
     	*count = 0;
     	*tail_bin = 0;
+    	*reached = 0;
     }
     __syncthreads();
     return ret;
@@ -81,6 +83,7 @@ __global__ void BFS_gpu(Node *graph_nodes_av, Edge *graph_edges_av, int *cost,
     int* shift = (int*)&l_q2[W_QUEUE_SIZE];
     int* base = (int*)&shift[1];
     int* count = (int*)&base[1];
+	__shared__ int reached;
 
     const int tid     = threadIdx.x;
     const int gtid    = blockIdx.x * blockDim.x + threadIdx.x;
@@ -95,6 +98,7 @@ __global__ void BFS_gpu(Node *graph_nodes_av, Edge *graph_edges_av, int *cost,
         // Reset queue
         *tail_bin = 0;
         *count = 0;
+        reached = 0;
     }
 
     // Fetch frontier elements from the queue
@@ -121,7 +125,7 @@ __global__ void BFS_gpu(Node *graph_nodes_av, Edge *graph_edges_av, int *cost,
                     int tail_index = atomicAdd(tail_bin, 1);
                     while(tail_index >= W_QUEUE_SIZE) {
                     	*count = 1;
-                    	shift_to_global(shift, tail, tail_bin, q2, l_q2, count);
+                    	shift_to_global(shift, tail, tail_bin, q2, l_q2, count, &reached);
                         //*overflow = 1;
                         tail_index = atomicAdd(tail_bin, 1);
                         //printf("OVERFLOW\n");
@@ -131,14 +135,15 @@ __global__ void BFS_gpu(Node *graph_nodes_av, Edge *graph_edges_av, int *cost,
                 }
             }
         }
-		while(shift_to_global(shift, tail, tail_bin, q2, l_q2, count));
+		while(shift_to_global(shift, tail, tail_bin, q2, l_q2, count, &reached));
         if(tid == 0)
             *base = atomicAdd(&head[0], WG_SIZE); // Fetch more frontier elements from the queue
         __syncthreads();
         my_base = *base;
     }
     
-    while(shift_to_global(shift, tail, tail_bin, q2, l_q2, count, true));
+	*count = 1;
+    while(shift_to_global(shift, tail, tail_bin, q2, l_q2, count, &reached));
 
     if(gtid == 0) {
         atomicAdd(&iter[0], 1);
