@@ -38,6 +38,12 @@ ${BIN}/bfs_chai: | ./${BIN}
 	make; \
 	cp bfs ../../../${BIN}/bfs_chai;
 
+
+${BIN}/sssp_chai: | ./${BIN}
+	cd chai/CUDA-D/SSSP/; \
+	make; \
+	cp sssp ../../../${BIN}/sssp_chai;
+
 ${BIN}/sssp: | ./${BIN}
 	cd gunrock; \
 	mkdir -p build; \
@@ -85,17 +91,26 @@ ${BIN}/dmr: | ./${BIN}
 	$(NVCC) dmr.cu -I./../../../../libgpu/include -I./../../../../external/moderngpu/src -I./../../../../external/cub ./../../../../libgpu/src/csr_graph.cu ./../../../../libgpu/src/ggc_rt.cu  -cudart shared -O3 -DNDEBUG  -arch=sm_70 --expt-extended-lambda -std=c++14 -DTHRUST_IGNORE_CUB_VERSION_CHECK -D_FORCE_INLINES  -lcudadevrt -lcudart -o dmr; \
 	cp dmr ../../../../../${BIN}
 
+${BIN}/bfs_ls: | ./${BIN}
+	cd Galois/lonestar/analytics/gpu/bfs; \
+	$(NVCC) bfs.cu support.cu -I./../../../../libgpu/include -I./../../../../external/moderngpu/src ./../../../../libgpu/src/csr_graph.cu ./../../../../libgpu/src/skelapp/skel.cu ./../../../../libgpu/src/ggc_rt.cu  -cudart shared -O3 -DNDEBUG  -arch=sm_70 --expt-extended-lambda -std=c++14 -DTHRUST_IGNORE_CUB_VERSION_CHECK -D_FORCE_INLINES  -lcudadevrt -lcudart -o bfs; \
+	cp bfs ../../../../../${BIN}/bfs_ls
+
+${BIN}/pr_ls: | ./${BIN}
+	cd Galois/lonestar/analytics/gpu/pagerank; \
+	$(NVCC) pagerank.cu support.cu -I./../../../../libgpu/include -I./../../../../external/moderngpu/src ./../../../../libgpu/src/csr_graph.cu ./../../../../libgpu/src/skelapp/skel.cu ./../../../../libgpu/src/ggc_rt.cu  -cudart shared -O3 -DNDEBUG  -arch=sm_70 --expt-extended-lambda -std=c++14 -DTHRUST_IGNORE_CUB_VERSION_CHECK -D_FORCE_INLINES  -lcudadevrt -lcudart -o pr; \
+	cp pr ../../../../../${BIN}/pr_ls
+
 
 ${BIN}/sw: | ./${BIN}
 	cd GASAL2; \
 	${NVCC} src/*.cpp src/*.cu test_prog/*.cpp submodules/alignment_boilerplate/src/* -I include/ -I submodules/alignment_boilerplate/include -I src/ -cudart=shared -lcudart -DN_CODE=0x4E -DMAX_QUERY_LEN=1024 -lpthread -Xcompiler -fopenmp -o program_gpu; \
 	cp ./program_gpu ../${BIN}/sw
-	
-	#mkdir -p build; \
-	#cd build; \
-	#pwd; \
-	#cmake CMAKE_BUILD_TYPE=Release ..; \
-	#$(MAKE); \
+
+${BIN}/ptr_chase: | ./${BIN}
+	cd microbenchmarks; \
+	${NVCC} pointerchase.cu -cudart=shared -lcudart -o ptr_chase; \
+	cp ./ptr_chase ../${BIN}/ptr_chase
 
 ${CUDA_PATH}/include/cusp: cusp/
 	cp -r ./cusp ${CUDA_PATH}/include/
