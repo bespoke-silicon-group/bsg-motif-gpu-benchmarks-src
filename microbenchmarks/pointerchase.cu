@@ -6,7 +6,7 @@
 #define time_diff(a, b) std::chrono::duration_cast<std::chrono::microseconds>(a - b).count()
 
 #define NBLOCKS 80
-#define ITERS 200
+#define ITERS 2000
 
 class LFSR
 {
@@ -50,18 +50,38 @@ public:
     }
 };
 
-
-__global__ void chaseKernel(uint64_t **ptr_array, int num_elems) {
+__global__ void testKernel(uint64_t **ptr_array, int num_elems, uint64_t *output) {
 	int id = (threadIdx.x + blockIdx.x * blockDim.x) % num_elems;
 	volatile uint64_t *ptr = ptr_array[id];
 	
-	#pragma unroll 200
+	// Warmup
+	#pragma unroll
+	for(int i = threadIdx.x; i < num_elems; i += blockDim.x) {
+		ptr = (uint64_t*)ptr[i];
+	}
+	__threadfence();
+}
+
+__global__ void chaseKernel(uint64_t **ptr_array, int num_elems, uint64_t *output) {
+	int id = (threadIdx.x + blockIdx.x * blockDim.x) % num_elems;
+	volatile uint64_t *ptr = ptr_array[id];
+	
+	// Warmup
+	#pragma unroll
+	for(int i = threadIdx.x; i < num_elems; i += blockDim.x) {
+		ptr = (uint64_t*)ptr[i];
+	}
+	__threadfence();
+
+	ptr = ptr_array[id];
+	//uint64_t start = clock64();
+	#pragma unroll 1000
 	for(int i = 0; i < ITERS; ++i) {
 		ptr = (uint64_t*)*ptr;
 	}
-	
-	// Needed to make sure prior loop doesn't get optimized out
-	//ptr_array[id] = (id + 1) % num_elems;
+	__threadfence();
+	//uint64_t end = clock64();
+	//output[id] = end - start;
 }
 
 void make_array(uint64_t **h_ptr_array, uint64_t **d_ptr_array, int num_elems, int region_size) {
@@ -94,8 +114,10 @@ int main(int argc, char *argv[])
 	size_t data_size = atol(argv[1]);
 	int region_size = atoi(argv[2]);
 	int nthreads = atoi(argv[3]);
+	int nblocks = max(NBLOCKS, NBLOCKS * (nthreads / 1024));
+	nthreads = min(nthreads, 1024);
 	
-	printf("Dsize:\t%lu\nNumIters:\t%d\nRegionSize:\t%d\nNthreads:\t%d\n", data_size, ITERS, region_size, nthreads * NBLOCKS);
+	printf("Dsize:\t%lu\nNumIters:\t%d\nRegionSize:\t%d\nNthreads:\t%d\n", data_size, ITERS, region_size, nthreads * nblocks);
 	
 	uint64_t **h_ptr_array;
 	h_ptr_array = (uint64_t **)malloc(data_size);
@@ -103,16 +125,19 @@ int main(int argc, char *argv[])
 	uint64_t **d_ptr_array;
 	cudaMalloc((void **)&d_ptr_array, data_size);
 	
-	
 	make_array(h_ptr_array, d_ptr_array, data_size / sizeof(uint64_t *), region_size);
 	cudaMemcpy(d_ptr_array, h_ptr_array, data_size, cudaMemcpyHostToDevice);
 	
+	uint64_t *d_output;
+	cudaMalloc((void **)&d_output, sizeof(uint64_t) * nthreads * nblocks);
+	
 	auto start = TIME_NOW;
-	int nblocks = max(NBLOCKS, NBLOCKS * (nthreads / 1024));
-	chaseKernel<<<nblocks, nthreads>>> (d_ptr_array, data_size / sizeof(uint64_t));
+	testKernel<<<nblocks, nthreads>>> (d_ptr_array, data_size / sizeof(uint64_t), d_output);
+	testKernel<<<nblocks, nthreads>>> (d_ptr_array, data_size / sizeof(uint64_t), d_output);
+	chaseKernel<<<nblocks, nthreads>>> (d_ptr_array, data_size / sizeof(uint64_t), d_output);
 	cudaDeviceSynchronize();
 	auto end = TIME_NOW;
-	printf("Traversals:\t%ld\nTime:\t%ld\n", (long)nthreads * (long)NBLOCKS * (long)ITERS, time_diff(end, start));
+	printf("Traversals:\t%ld\nTime:\t%ld\n", (long)nthreads * (long)nblocks * (long)ITERS, time_diff(end, start));
 	
 	return 0;
 }
