@@ -50,41 +50,49 @@ public:
     }
 };
 
-__global__ void testKernel(uint64_t **ptr_array, int num_elems, uint64_t *output) {
+__global__ void testKernel(uint64_t **ptr_array, uint64_t **ptr_start_array, int num_elems, uint64_t *output) {
 	int id = (threadIdx.x + blockIdx.x * blockDim.x) % num_elems;
-	volatile uint64_t *ptr = ptr_array[id];
+	volatile uint64_t *ptr;
 	
 	// Warmup
 	#pragma unroll
 	for(int i = threadIdx.x; i < num_elems; i += blockDim.x) {
-		ptr = (uint64_t*)ptr[i];
+		ptr = (uint64_t*)ptr_array[i];
 	}
 	__threadfence();
 }
 
-__global__ void chaseKernel(uint64_t **ptr_array, int num_elems, uint64_t *output) {
-	int id = (threadIdx.x + blockIdx.x * blockDim.x) % num_elems;
-	volatile uint64_t *ptr = ptr_array[id];
-	
+__global__ void chaseKernel1(uint64_t **ptr_array, uint64_t **ptr_start_array, int num_elems, uint64_t *output) {
+	volatile uint64_t *ptr;
 	// Warmup
 	#pragma unroll
 	for(int i = threadIdx.x; i < num_elems; i += blockDim.x) {
-		ptr = (uint64_t*)ptr[i];
+		ptr = (uint64_t*)ptr_array[i];
 	}
 	__threadfence();
-
-	ptr = ptr_array[id];
+	
+	int id = threadIdx.x + blockIdx.x * blockDim.x;
+	ptr = ptr_start_array[id];
 	//uint64_t start = clock64();
 	#pragma unroll 1000
 	for(int i = 0; i < ITERS; ++i) {
 		ptr = (uint64_t*)*ptr;
 	}
 	__threadfence();
-	//uint64_t end = clock64();
-	//output[id] = end - start;
 }
 
-void make_array(uint64_t **h_ptr_array, uint64_t **d_ptr_array, int num_elems, int region_size) {
+__global__ void chaseKernel2(uint64_t **ptr_array, uint64_t **ptr_start_array, int num_elems, uint64_t *output) {
+	int id = threadIdx.x + blockIdx.x * blockDim.x;
+	volatile uint64_t *ptr = ptr_start_array[id];
+	//uint64_t start = clock64();
+	#pragma unroll 1000
+	for(int i = 0; i < ITERS; ++i) {
+		ptr = (uint64_t*)*ptr;
+	}
+	__threadfence();
+}
+
+void make_array(uint64_t **h_ptr_array, uint64_t **d_ptr_array, uint64_t **h_ptr_start_array, int num_elems, int num_threads, int region_size) {
 	
 	int num_regions = (num_elems / region_size);
     LFSR rng(log2(num_regions));
@@ -95,10 +103,21 @@ void make_array(uint64_t **h_ptr_array, uint64_t **d_ptr_array, int num_elems, i
 		long choice = rng.next(loc);
 		loc = (choice % num_regions) * region_size;
 		
-		
 		int j = i;
 		for(; j < i + region_size; ++j) {
 			h_ptr_array[j] = (uint64_t *)&d_ptr_array[loc + j - i];
+		}
+		i = j - 1;
+	}
+	
+	for(int i = 0; i < num_threads; ++i) {
+		// Pick random starting location
+		long choice = rand();
+		loc = (choice % num_regions) * region_size;
+		
+		int j = i;
+		for(; j < i + region_size; ++j) {
+			h_ptr_start_array[j] = (uint64_t *)&d_ptr_array[loc + j - i];
 		}
 		i = j - 1;
 	}
@@ -119,23 +138,35 @@ int main(int argc, char *argv[])
 	
 	printf("Dsize:\t%lu\nNumIters:\t%d\nRegionSize:\t%d\nNthreads:\t%d\n", data_size, ITERS, region_size, nthreads * nblocks);
 	
-	uint64_t **h_ptr_array;
+	uint64_t **h_ptr_array, **h_ptr_start_array;
 	h_ptr_array = (uint64_t **)malloc(data_size);
+	h_ptr_start_array = (uint64_t **)malloc(nblocks * nthreads * sizeof(uint64_t*));
 	
-	uint64_t **d_ptr_array;
+	uint64_t **d_ptr_array, **d_ptr_start_array;
 	cudaMalloc((void **)&d_ptr_array, data_size);
+	cudaMalloc((void **)&d_ptr_start_array, nblocks * nthreads * sizeof(uint64_t*));
 	
-	make_array(h_ptr_array, d_ptr_array, data_size / sizeof(uint64_t *), region_size);
+	make_array(h_ptr_array, d_ptr_array, h_ptr_start_array, data_size / sizeof(uint64_t *), nblocks * nthreads, region_size);
+	
 	cudaMemcpy(d_ptr_array, h_ptr_array, data_size, cudaMemcpyHostToDevice);
+	cudaMemcpy(d_ptr_start_array, h_ptr_start_array, nblocks * nthreads * sizeof(uint64_t*), cudaMemcpyHostToDevice);
 	
 	uint64_t *d_output;
 	cudaMalloc((void **)&d_output, sizeof(uint64_t) * nthreads * nblocks);
 	
 	auto start = TIME_NOW;
-	testKernel<<<nblocks, nthreads>>> (d_ptr_array, data_size / sizeof(uint64_t), d_output);
-	testKernel<<<nblocks, nthreads>>> (d_ptr_array, data_size / sizeof(uint64_t), d_output);
-	chaseKernel<<<nblocks, nthreads>>> (d_ptr_array, data_size / sizeof(uint64_t), d_output);
-	cudaDeviceSynchronize();
+	// For small, need to warmup L1
+	if(data_size <= 128 * 1024) {
+		printf("Threekernel\n");
+		testKernel<<<nblocks, nthreads>>> (d_ptr_array, d_ptr_start_array, data_size / sizeof(uint64_t), d_output);
+		testKernel<<<nblocks, nthreads>>> (d_ptr_array, d_ptr_start_array, data_size / sizeof(uint64_t), d_output);
+		chaseKernel1<<<nblocks, nthreads>>> (d_ptr_array, d_ptr_start_array, data_size / sizeof(uint64_t), d_output);
+		cudaDeviceSynchronize();
+	}
+	else {
+		chaseKernel2<<<nblocks, nthreads>>> (d_ptr_array, d_ptr_start_array, data_size / sizeof(uint64_t), d_output);
+		cudaDeviceSynchronize();
+	}
 	auto end = TIME_NOW;
 	printf("Traversals:\t%ld\nTime:\t%ld\n", (long)nthreads * (long)nblocks * (long)ITERS, time_diff(end, start));
 	
