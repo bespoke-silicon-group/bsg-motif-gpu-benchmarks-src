@@ -46,7 +46,7 @@
 #define GRAY0 16677219
 #define GRAY1 16677220
 #define BLACK 16677221
-#define W_QUEUE_SIZE 1600
+#define W_QUEUE_SIZE 3200
 
 typedef struct {
     int x;

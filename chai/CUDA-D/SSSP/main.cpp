@@ -59,13 +59,13 @@ struct Params {
     Params(int argc, char **argv) {
         device          = 0;
         n_gpu_threads    = 256;
-        n_gpu_blocks   = 8;
-        n_threads       = 2;
-        n_warmup        = 1;
+        n_gpu_blocks   = 640;
+        n_threads       = 0;
+        n_warmup        = 0;
         n_reps          = 1;
         file_name       = "input/NYR_input.dat";
         comparison_file = "output/NYR_bfs.out";
-        switching_limit = 128;
+        switching_limit = 1;
         int opt;
         while((opt = getopt(argc, argv, "hd:i:g:t:w:r:f:c:l:")) >= 0) {
             switch(opt) {
@@ -88,9 +88,9 @@ struct Params {
                 exit(0);
             }
         }
-        assert(n_gpu_threads > 0 && "Invalid # of device threads!");
-        assert(n_gpu_blocks > 0 && "Invalid # of device blocks!");
-        assert(n_threads > 0 && "Invalid # of host threads!");
+        //assert(n_gpu_threads > 0 && "Invalid # of device threads!");
+        //assert(n_gpu_blocks > 0 && "Invalid # of device blocks!");
+        //assert(n_threads > 0 && "Invalid # of host threads!");
     }
 
     void usage() {
@@ -269,7 +269,8 @@ int main(int argc, char **argv) {
         h_iter[0].store(0);
         h_overflow[0] = 0;
         h_gray_shade[0].store(GRAY0);
-
+        h_num_t[0] = 1;
+		/*
         if(rep >= p.n_warmup)
             timer.start("Kernel");
 
@@ -298,7 +299,7 @@ int main(int argc, char **argv) {
         h_iter[0].fetch_add(1);
         if(rep >= p.n_warmup)
             timer.stop("Kernel");
-
+		*/
         // Pointers to input and output queues
         int * h_qin  = h_q2;
         int * h_qout = h_q1;
@@ -373,7 +374,7 @@ int main(int argc, char **argv) {
                 if(rep >= p.n_warmup)
                     timer.stop("Copy To Device");
 
-
+				int iter = 0;
                 // Continue until switching_limit condition is not satisfied
                 while((*h_num_t != 0) && (*h_num_t >= p.switching_limit || CPU_EXEC == 0) && GPU_EXEC == 1) {
 
@@ -405,10 +406,12 @@ int main(int argc, char **argv) {
                         timer.start("Kernel");
                     assert(p.n_gpu_threads <= max_gpu_threads && 
                         "The thread block size is greater than the maximum thread block size that can be used on this device");
-                    cudaStatus = call_SSSP_gpu(p.n_gpu_blocks, p.n_gpu_threads, d_nodes, d_edges, d_cost,
+                    
+                    int threadblocks = min(p.n_gpu_blocks, (*h_num_t + p.n_gpu_threads - 1) / p.n_gpu_threads);
+                    cudaStatus = call_SSSP_gpu(threadblocks, p.n_gpu_threads, d_nodes, d_edges, d_cost,
                         d_color, d_qin, d_qout, d_num_t,
                         d_head, d_tail, d_threads_end, d_threads_run,
-                    		d_overflow, d_gray_shade, d_iter, p.switching_limit, CPU_EXEC, sizeof(int) * (W_QUEUE_SIZE + 3));
+                    		d_overflow, d_gray_shade, d_iter, p.switching_limit, CPU_EXEC, sizeof(int) * (W_QUEUE_SIZE + 4));
                     cudaDeviceSynchronize();
                     CUDA_ERR();
                     if(rep >= p.n_warmup)
@@ -432,6 +435,7 @@ int main(int argc, char **argv) {
                         h_gray_shade[0].store(GRAY0);
                     else
                         h_gray_shade[0].store(GRAY1);
+                    printf("%d\tvisited\t%d\n", ++iter, h_num_t[0]);
                 }
 
                 if(rep >= p.n_warmup)
@@ -464,7 +468,7 @@ int main(int argc, char **argv) {
     timer.print("Copy Back and Merge", p.n_reps);
 
     // Verify answer
-    verify(h_cost, n_nodes, p.comparison_file);
+    //verify(h_cost, n_nodes, p.comparison_file);
 
     // Free memory
     timer.start("Deallocation");

@@ -32,13 +32,16 @@
 #  THE SOFTWARE.
 # 
 
-CXX=nvcc
-CXX_FLAGS=-std=c++11
+CUDA_SDK = /usr/local/cuda-11
+CXX=$(CUDA_SDK)/bin/nvcc
+CXX_FLAGS=-std=c++11 -cudart=shared
+CHAI_CUDA_LIB = $(CUDA_SDK)/lib64
+CHAI_CUDA_INC = $(CUDA_SDK)/include
 
 ifndef CHAI_CUDA_LIB
     $(error CHAI_CUDA_LIB not defined. This environment variable must be defined to point to the location of the CUDA library)
 endif
-LIB=-L/usr/lib/ -L$(CHAI_CUDA_LIB) -lm
+LIB=-L/usr/lib/ -L$(CHAI_CUDA_LIB) -lm -lpthread
 
 ifndef CHAI_CUDA_INC
     $(error CHAI_CUDA_INC not defined. This environment variable must be defined to point to the location of the CUDA header files)
