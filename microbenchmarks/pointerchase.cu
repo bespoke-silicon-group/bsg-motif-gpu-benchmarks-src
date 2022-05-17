@@ -52,44 +52,41 @@ public:
 
 __global__ void testKernel(uint64_t **ptr_array, uint64_t **ptr_start_array, int num_elems, uint64_t *output) {
 	int id = (threadIdx.x + blockIdx.x * blockDim.x) % num_elems;
-	volatile uint64_t *ptr;
 	
 	// Warmup
 	#pragma unroll
 	for(int i = threadIdx.x; i < num_elems; i += blockDim.x) {
-		ptr = (uint64_t*)ptr_array[i];
+		output[i % (blockDim.x * gridDim.x)] = (uint64_t)ptr_array[i];
 	}
-	__threadfence();
 }
 
 __global__ void chaseKernel1(uint64_t **ptr_array, uint64_t **ptr_start_array, int num_elems, uint64_t *output) {
-	volatile uint64_t *ptr;
+	int id = threadIdx.x + blockIdx.x * blockDim.x;
 	// Warmup
 	#pragma unroll
 	for(int i = threadIdx.x; i < num_elems; i += blockDim.x) {
-		ptr = (uint64_t*)ptr_array[i];
+		output[i % (blockDim.x * gridDim.x)] = (uint64_t)ptr_array[i];
 	}
-	__threadfence();
+	//__threadfence();
 	
-	int id = threadIdx.x + blockIdx.x * blockDim.x;
-	ptr = ptr_start_array[id];
+	uint64_t *ptr = ptr_start_array[id];
 	//uint64_t start = clock64();
 	#pragma unroll 1000
 	for(int i = 0; i < ITERS; ++i) {
 		ptr = (uint64_t*)*ptr;
 	}
-	__threadfence();
+	ptr_start_array[id] = ptr;
 }
 
 __global__ void chaseKernel2(uint64_t **ptr_array, uint64_t **ptr_start_array, int num_elems, uint64_t *output) {
 	int id = threadIdx.x + blockIdx.x * blockDim.x;
-	volatile uint64_t *ptr = ptr_start_array[id];
+	uint64_t *ptr = ptr_start_array[id];
 	//uint64_t start = clock64();
 	#pragma unroll 1000
 	for(int i = 0; i < ITERS; ++i) {
 		ptr = (uint64_t*)*ptr;
 	}
-	__threadfence();
+	ptr_start_array[id] = ptr;
 }
 
 void make_array(uint64_t **h_ptr_array, uint64_t **d_ptr_array, uint64_t **h_ptr_start_array, int num_elems, int num_threads, int region_size) {
