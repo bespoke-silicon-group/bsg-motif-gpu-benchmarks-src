@@ -53,33 +53,33 @@ float2* sdata = (float2*)shared;
 	float2 mult;
 	mult.x = 0;
 	mult.y = 0;
-		if ((((threadIdx.x + blockIdx.x * blockDim.x)) / 256) * (16384) < 16384) {
-		inoutID = ((threadIdx.x + blockIdx.x * blockDim.x)) % (256) + 256 * (threadIdx.y + 0) + (((threadIdx.x + blockIdx.x * blockDim.x)) / 256) * (16384);
-			inoutID = (inoutID);
+		if ((((threadIdx.x + blockIdx.x * blockDim.x)) / 64) % (256)+(((threadIdx.x + blockIdx.x * blockDim.x)) / 16384) * (16384) < 16384) {
+		inoutID = (256 * (threadIdx.y + 0) + (((threadIdx.x + blockIdx.x * blockDim.x)) / 64) % (256)+(((threadIdx.x + blockIdx.x * blockDim.x)) / 16384) * (16384));
+			inoutID = (((threadIdx.x + blockIdx.x * blockDim.x)) % (64)) + (inoutID) * 64;
 			temp_0=inputs[inoutID];
-		inoutID = ((threadIdx.x + blockIdx.x * blockDim.x)) % (256) + 256 * (threadIdx.y + 8) + (((threadIdx.x + blockIdx.x * blockDim.x)) / 256) * (16384);
-			inoutID = (inoutID);
+		inoutID = (256 * (threadIdx.y + 8) + (((threadIdx.x + blockIdx.x * blockDim.x)) / 64) % (256)+(((threadIdx.x + blockIdx.x * blockDim.x)) / 16384) * (16384));
+			inoutID = (((threadIdx.x + blockIdx.x * blockDim.x)) % (64)) + (inoutID) * 64;
 			temp_1=inputs[inoutID];
-		inoutID = ((threadIdx.x + blockIdx.x * blockDim.x)) % (256) + 256 * (threadIdx.y + 16) + (((threadIdx.x + blockIdx.x * blockDim.x)) / 256) * (16384);
-			inoutID = (inoutID);
+		inoutID = (256 * (threadIdx.y + 16) + (((threadIdx.x + blockIdx.x * blockDim.x)) / 64) % (256)+(((threadIdx.x + blockIdx.x * blockDim.x)) / 16384) * (16384));
+			inoutID = (((threadIdx.x + blockIdx.x * blockDim.x)) % (64)) + (inoutID) * 64;
 			temp_2=inputs[inoutID];
-		inoutID = ((threadIdx.x + blockIdx.x * blockDim.x)) % (256) + 256 * (threadIdx.y + 24) + (((threadIdx.x + blockIdx.x * blockDim.x)) / 256) * (16384);
-			inoutID = (inoutID);
+		inoutID = (256 * (threadIdx.y + 24) + (((threadIdx.x + blockIdx.x * blockDim.x)) / 64) % (256)+(((threadIdx.x + blockIdx.x * blockDim.x)) / 16384) * (16384));
+			inoutID = (((threadIdx.x + blockIdx.x * blockDim.x)) % (64)) + (inoutID) * 64;
 			temp_3=inputs[inoutID];
-		inoutID = ((threadIdx.x + blockIdx.x * blockDim.x)) % (256) + 256 * (threadIdx.y + 32) + (((threadIdx.x + blockIdx.x * blockDim.x)) / 256) * (16384);
-			inoutID = (inoutID);
+		inoutID = (256 * (threadIdx.y + 32) + (((threadIdx.x + blockIdx.x * blockDim.x)) / 64) % (256)+(((threadIdx.x + blockIdx.x * blockDim.x)) / 16384) * (16384));
+			inoutID = (((threadIdx.x + blockIdx.x * blockDim.x)) % (64)) + (inoutID) * 64;
 			temp_4=inputs[inoutID];
-		inoutID = ((threadIdx.x + blockIdx.x * blockDim.x)) % (256) + 256 * (threadIdx.y + 40) + (((threadIdx.x + blockIdx.x * blockDim.x)) / 256) * (16384);
-			inoutID = (inoutID);
+		inoutID = (256 * (threadIdx.y + 40) + (((threadIdx.x + blockIdx.x * blockDim.x)) / 64) % (256)+(((threadIdx.x + blockIdx.x * blockDim.x)) / 16384) * (16384));
+			inoutID = (((threadIdx.x + blockIdx.x * blockDim.x)) % (64)) + (inoutID) * 64;
 			temp_5=inputs[inoutID];
-		inoutID = ((threadIdx.x + blockIdx.x * blockDim.x)) % (256) + 256 * (threadIdx.y + 48) + (((threadIdx.x + blockIdx.x * blockDim.x)) / 256) * (16384);
-			inoutID = (inoutID);
+		inoutID = (256 * (threadIdx.y + 48) + (((threadIdx.x + blockIdx.x * blockDim.x)) / 64) % (256)+(((threadIdx.x + blockIdx.x * blockDim.x)) / 16384) * (16384));
+			inoutID = (((threadIdx.x + blockIdx.x * blockDim.x)) % (64)) + (inoutID) * 64;
 			temp_6=inputs[inoutID];
-		inoutID = ((threadIdx.x + blockIdx.x * blockDim.x)) % (256) + 256 * (threadIdx.y + 56) + (((threadIdx.x + blockIdx.x * blockDim.x)) / 256) * (16384);
-			inoutID = (inoutID);
+		inoutID = (256 * (threadIdx.y + 56) + (((threadIdx.x + blockIdx.x * blockDim.x)) / 64) % (256)+(((threadIdx.x + blockIdx.x * blockDim.x)) / 16384) * (16384));
+			inoutID = (((threadIdx.x + blockIdx.x * blockDim.x)) % (64)) + (inoutID) * 64;
 			temp_7=inputs[inoutID];
 	}
-		if ((((threadIdx.x + blockIdx.x * blockDim.x)) / 256) * (16384) < 16384) {
+		if ((((threadIdx.x + blockIdx.x * blockDim.x)) / 64) % (256)+(((threadIdx.x + blockIdx.x * blockDim.x)) / 16384) * (16384) < 16384) {
 		stageInvocationID = (threadIdx.y+ 0) % (1);
 		LUTId = stageInvocationID + 0;
 	w = twiddleLUT[LUTId];
@@ -177,7 +177,7 @@ float2* sdata = (float2*)shared;
 }		sharedStride = 64;
 	__syncthreads();
 
-		if ((((threadIdx.x + blockIdx.x * blockDim.x)) / 256) * (16384) < 16384) {
+		if ((((threadIdx.x + blockIdx.x * blockDim.x)) / 64) % (256)+(((threadIdx.x + blockIdx.x * blockDim.x)) / 16384) * (16384) < 16384) {
 	stageInvocationID = threadIdx.y + 0;
 	blockInvocationID = stageInvocationID;
 	stageInvocationID = stageInvocationID % 1;
@@ -218,7 +218,7 @@ float2* sdata = (float2*)shared;
 	sdata[sdataID] = temp_7;
 }	__syncthreads();
 
-		if ((((threadIdx.x + blockIdx.x * blockDim.x)) / 256) * (16384) < 16384) {
+		if ((((threadIdx.x + blockIdx.x * blockDim.x)) / 64) % (256)+(((threadIdx.x + blockIdx.x * blockDim.x)) / 16384) * (16384) < 16384) {
 		stageInvocationID = (threadIdx.y+ 0) % (8);
 		LUTId = stageInvocationID + 3;
 		temp_0 = sdata[sharedStride*(threadIdx.y+0)+threadIdx.x];
@@ -322,64 +322,56 @@ float2* sdata = (float2*)shared;
 	temp_3 = temp_6;
 	temp_6 = loc_0;
 }		sharedStride = 64;
-		if ((((threadIdx.x + blockIdx.x * blockDim.x)) / 256) * (16384) < 16384) {
-}		if ((((threadIdx.x + blockIdx.x * blockDim.x)) / 256) * (16384) < 16384) {
-		mult = twiddleLUT[27 + (((threadIdx.x + blockIdx.x * blockDim.x)) % (256)) + (threadIdx.y + 0) * 256];
+		if ((((threadIdx.x + blockIdx.x * blockDim.x)) / 64) % (256)+(((threadIdx.x + blockIdx.x * blockDim.x)) / 16384) * (16384) < 16384) {
+}		if ((((threadIdx.x + blockIdx.x * blockDim.x)) / 64) % (256)+(((threadIdx.x + blockIdx.x * blockDim.x)) / 16384) * (16384) < 16384) {
+		mult = twiddleLUT[27+((((threadIdx.x + blockIdx.x * blockDim.x))/64) % (256))+256*(threadIdx.y+0)];
 		w.x = temp_0.x * mult.x - temp_0.y * mult.y;
 		temp_0.y = temp_0.y * mult.x + temp_0.x * mult.y;
 		temp_0.x = w.x;
-		mult = twiddleLUT[27 + (((threadIdx.x + blockIdx.x * blockDim.x)) % (256)) + (threadIdx.y + 8) * 256];
+		mult = twiddleLUT[27+((((threadIdx.x + blockIdx.x * blockDim.x))/64) % (256))+256*(threadIdx.y+8)];
 		w.x = temp_1.x * mult.x - temp_1.y * mult.y;
 		temp_1.y = temp_1.y * mult.x + temp_1.x * mult.y;
 		temp_1.x = w.x;
-		mult = twiddleLUT[27 + (((threadIdx.x + blockIdx.x * blockDim.x)) % (256)) + (threadIdx.y + 16) * 256];
+		mult = twiddleLUT[27+((((threadIdx.x + blockIdx.x * blockDim.x))/64) % (256))+256*(threadIdx.y+16)];
 		w.x = temp_2.x * mult.x - temp_2.y * mult.y;
 		temp_2.y = temp_2.y * mult.x + temp_2.x * mult.y;
 		temp_2.x = w.x;
-		mult = twiddleLUT[27 + (((threadIdx.x + blockIdx.x * blockDim.x)) % (256)) + (threadIdx.y + 24) * 256];
+		mult = twiddleLUT[27+((((threadIdx.x + blockIdx.x * blockDim.x))/64) % (256))+256*(threadIdx.y+24)];
 		w.x = temp_3.x * mult.x - temp_3.y * mult.y;
 		temp_3.y = temp_3.y * mult.x + temp_3.x * mult.y;
 		temp_3.x = w.x;
-		mult = twiddleLUT[27 + (((threadIdx.x + blockIdx.x * blockDim.x)) % (256)) + (threadIdx.y + 32) * 256];
+		mult = twiddleLUT[27+((((threadIdx.x + blockIdx.x * blockDim.x))/64) % (256))+256*(threadIdx.y+32)];
 		w.x = temp_4.x * mult.x - temp_4.y * mult.y;
 		temp_4.y = temp_4.y * mult.x + temp_4.x * mult.y;
 		temp_4.x = w.x;
-		mult = twiddleLUT[27 + (((threadIdx.x + blockIdx.x * blockDim.x)) % (256)) + (threadIdx.y + 40) * 256];
+		mult = twiddleLUT[27+((((threadIdx.x + blockIdx.x * blockDim.x))/64) % (256))+256*(threadIdx.y+40)];
 		w.x = temp_5.x * mult.x - temp_5.y * mult.y;
 		temp_5.y = temp_5.y * mult.x + temp_5.x * mult.y;
 		temp_5.x = w.x;
-		mult = twiddleLUT[27 + (((threadIdx.x + blockIdx.x * blockDim.x)) % (256)) + (threadIdx.y + 48) * 256];
+		mult = twiddleLUT[27+((((threadIdx.x + blockIdx.x * blockDim.x))/64) % (256))+256*(threadIdx.y+48)];
 		w.x = temp_6.x * mult.x - temp_6.y * mult.y;
 		temp_6.y = temp_6.y * mult.x + temp_6.x * mult.y;
 		temp_6.x = w.x;
-		mult = twiddleLUT[27 + (((threadIdx.x + blockIdx.x * blockDim.x)) % (256)) + (threadIdx.y + 56) * 256];
+		mult = twiddleLUT[27+((((threadIdx.x + blockIdx.x * blockDim.x))/64) % (256))+256*(threadIdx.y+56)];
 		w.x = temp_7.x * mult.x - temp_7.y * mult.y;
 		temp_7.y = temp_7.y * mult.x + temp_7.x * mult.y;
 		temp_7.x = w.x;
-}		if ((((threadIdx.x + blockIdx.x * blockDim.x)) / 256) * (16384) < 16384) {
-		inoutID = ((threadIdx.x + blockIdx.x * blockDim.x)) % (256) + 256 * (threadIdx.y + 0) + (((threadIdx.x + blockIdx.x * blockDim.x)) / 256) * (16384);
-			inoutID = (inoutID) * 1;
+}		if ((((threadIdx.x + blockIdx.x * blockDim.x)) / 64) % (256)+(((threadIdx.x + blockIdx.x * blockDim.x)) / 16384) * (16384) < 16384) {
+			inoutID = (((threadIdx.x + blockIdx.x * blockDim.x)) % (64)) * 1 + (256 * (threadIdx.y + 0) + (((threadIdx.x + blockIdx.x * blockDim.x)) / 64) % (256)+(((threadIdx.x + blockIdx.x * blockDim.x)) / 16384) * (16384)) * 64;
 			outputs[inoutID] = temp_0;
-		inoutID = ((threadIdx.x + blockIdx.x * blockDim.x)) % (256) + 256 * (threadIdx.y + 8) + (((threadIdx.x + blockIdx.x * blockDim.x)) / 256) * (16384);
-			inoutID = (inoutID) * 1;
+			inoutID = (((threadIdx.x + blockIdx.x * blockDim.x)) % (64)) * 1 + (256 * (threadIdx.y + 8) + (((threadIdx.x + blockIdx.x * blockDim.x)) / 64) % (256)+(((threadIdx.x + blockIdx.x * blockDim.x)) / 16384) * (16384)) * 64;
 			outputs[inoutID] = temp_1;
-		inoutID = ((threadIdx.x + blockIdx.x * blockDim.x)) % (256) + 256 * (threadIdx.y + 16) + (((threadIdx.x + blockIdx.x * blockDim.x)) / 256) * (16384);
-			inoutID = (inoutID) * 1;
+			inoutID = (((threadIdx.x + blockIdx.x * blockDim.x)) % (64)) * 1 + (256 * (threadIdx.y + 16) + (((threadIdx.x + blockIdx.x * blockDim.x)) / 64) % (256)+(((threadIdx.x + blockIdx.x * blockDim.x)) / 16384) * (16384)) * 64;
 			outputs[inoutID] = temp_2;
-		inoutID = ((threadIdx.x + blockIdx.x * blockDim.x)) % (256) + 256 * (threadIdx.y + 24) + (((threadIdx.x + blockIdx.x * blockDim.x)) / 256) * (16384);
-			inoutID = (inoutID) * 1;
+			inoutID = (((threadIdx.x + blockIdx.x * blockDim.x)) % (64)) * 1 + (256 * (threadIdx.y + 24) + (((threadIdx.x + blockIdx.x * blockDim.x)) / 64) % (256)+(((threadIdx.x + blockIdx.x * blockDim.x)) / 16384) * (16384)) * 64;
 			outputs[inoutID] = temp_3;
-		inoutID = ((threadIdx.x + blockIdx.x * blockDim.x)) % (256) + 256 * (threadIdx.y + 32) + (((threadIdx.x + blockIdx.x * blockDim.x)) / 256) * (16384);
-			inoutID = (inoutID) * 1;
+			inoutID = (((threadIdx.x + blockIdx.x * blockDim.x)) % (64)) * 1 + (256 * (threadIdx.y + 32) + (((threadIdx.x + blockIdx.x * blockDim.x)) / 64) % (256)+(((threadIdx.x + blockIdx.x * blockDim.x)) / 16384) * (16384)) * 64;
 			outputs[inoutID] = temp_4;
-		inoutID = ((threadIdx.x + blockIdx.x * blockDim.x)) % (256) + 256 * (threadIdx.y + 40) + (((threadIdx.x + blockIdx.x * blockDim.x)) / 256) * (16384);
-			inoutID = (inoutID) * 1;
+			inoutID = (((threadIdx.x + blockIdx.x * blockDim.x)) % (64)) * 1 + (256 * (threadIdx.y + 40) + (((threadIdx.x + blockIdx.x * blockDim.x)) / 64) % (256)+(((threadIdx.x + blockIdx.x * blockDim.x)) / 16384) * (16384)) * 64;
 			outputs[inoutID] = temp_5;
-		inoutID = ((threadIdx.x + blockIdx.x * blockDim.x)) % (256) + 256 * (threadIdx.y + 48) + (((threadIdx.x + blockIdx.x * blockDim.x)) / 256) * (16384);
-			inoutID = (inoutID) * 1;
+			inoutID = (((threadIdx.x + blockIdx.x * blockDim.x)) % (64)) * 1 + (256 * (threadIdx.y + 48) + (((threadIdx.x + blockIdx.x * blockDim.x)) / 64) % (256)+(((threadIdx.x + blockIdx.x * blockDim.x)) / 16384) * (16384)) * 64;
 			outputs[inoutID] = temp_6;
-		inoutID = ((threadIdx.x + blockIdx.x * blockDim.x)) % (256) + 256 * (threadIdx.y + 56) + (((threadIdx.x + blockIdx.x * blockDim.x)) / 256) * (16384);
-			inoutID = (inoutID) * 1;
+			inoutID = (((threadIdx.x + blockIdx.x * blockDim.x)) % (64)) * 1 + (256 * (threadIdx.y + 56) + (((threadIdx.x + blockIdx.x * blockDim.x)) / 64) % (256)+(((threadIdx.x + blockIdx.x * blockDim.x)) / 16384) * (16384)) * 64;
 			outputs[inoutID] = temp_7;
 	}
 }

@@ -25884,7 +25884,7 @@ static inline VkFFTResult dispatchEnhanced(VkFFTApplication* app, VkFFTAxis* axi
 					}
 					else	printf("Launched none\n");
 					//cudaDeviceSynchronize();
-					printf("HERE\n");
+					//printf("HERE\n");
 				#else
 					printf("%d %d\n", axis->specializationConstants.axis_upload_id, inverse);
 					printf("GridDim (%d, %d, %d), blockDim (%d, %d, %d), shared mem: %d\n", (unsigned int)maxBlockSize[0], (unsigned int)maxBlockSize[1], (unsigned int)maxBlockSize[2], 

@@ -8,7 +8,7 @@ const float loc_SQRT1_2 = 0.70710678118654752440084436210485f;
 	__constant__ PushConsts consts;
 extern __shared__ float shared[];
 extern "C" __global__ void __launch_bounds__(512) VkFFT_main_0_1 (float2* inputs, float2* outputs, float2* twiddleLUT) {
-unsigned int sharedStride = 17;
+unsigned int sharedStride = 16;
 float2* sdata = (float2*)shared;
 
 	float2 temp_0;
@@ -50,54 +50,35 @@ float2* sdata = (float2*)shared;
 	unsigned int combinedID=0;
 	unsigned int inoutID=0;
 	unsigned int LUTId=0;
-		unsigned int numActiveThreads = ((blockIdx.x/1)==4) ? 0 : 512;
-		if((threadIdx.x+16*threadIdx.y)< numActiveThreads) {
-		combinedID = (threadIdx.x + 16 * threadIdx.y) + 0*numActiveThreads;
-		inoutID = (combinedID % 256) + (combinedID / 256) * 256 + (((blockIdx.x) % 1) * 256 + ((blockIdx.x) / 1) * 4096);
-			inoutID = (inoutID);
-		sdata[(combinedID / 256) + sharedStride*(combinedID % 256)] = inputs[inoutID];
-		combinedID = (threadIdx.x + 16 * threadIdx.y) + 1*numActiveThreads;
-		inoutID = (combinedID % 256) + (combinedID / 256) * 256 + (((blockIdx.x) % 1) * 256 + ((blockIdx.x) / 1) * 4096);
-			inoutID = (inoutID);
-		sdata[(combinedID / 256) + sharedStride*(combinedID % 256)] = inputs[inoutID];
-		combinedID = (threadIdx.x + 16 * threadIdx.y) + 2*numActiveThreads;
-		inoutID = (combinedID % 256) + (combinedID / 256) * 256 + (((blockIdx.x) % 1) * 256 + ((blockIdx.x) / 1) * 4096);
-			inoutID = (inoutID);
-		sdata[(combinedID / 256) + sharedStride*(combinedID % 256)] = inputs[inoutID];
-		combinedID = (threadIdx.x + 16 * threadIdx.y) + 3*numActiveThreads;
-		inoutID = (combinedID % 256) + (combinedID / 256) * 256 + (((blockIdx.x) % 1) * 256 + ((blockIdx.x) / 1) * 4096);
-			inoutID = (inoutID);
-		sdata[(combinedID / 256) + sharedStride*(combinedID % 256)] = inputs[inoutID];
-		combinedID = (threadIdx.x + 16 * threadIdx.y) + 4*numActiveThreads;
-		inoutID = (combinedID % 256) + (combinedID / 256) * 256 + (((blockIdx.x) % 1) * 256 + ((blockIdx.x) / 1) * 4096);
-			inoutID = (inoutID);
-		sdata[(combinedID / 256) + sharedStride*(combinedID % 256)] = inputs[inoutID];
-		combinedID = (threadIdx.x + 16 * threadIdx.y) + 5*numActiveThreads;
-		inoutID = (combinedID % 256) + (combinedID / 256) * 256 + (((blockIdx.x) % 1) * 256 + ((blockIdx.x) / 1) * 4096);
-			inoutID = (inoutID);
-		sdata[(combinedID / 256) + sharedStride*(combinedID % 256)] = inputs[inoutID];
-		combinedID = (threadIdx.x + 16 * threadIdx.y) + 6*numActiveThreads;
-		inoutID = (combinedID % 256) + (combinedID / 256) * 256 + (((blockIdx.x) % 1) * 256 + ((blockIdx.x) / 1) * 4096);
-			inoutID = (inoutID);
-		sdata[(combinedID / 256) + sharedStride*(combinedID % 256)] = inputs[inoutID];
-		combinedID = (threadIdx.x + 16 * threadIdx.y) + 7*numActiveThreads;
-		inoutID = (combinedID % 256) + (combinedID / 256) * 256 + (((blockIdx.x) % 1) * 256 + ((blockIdx.x) / 1) * 4096);
-			inoutID = (inoutID);
-		sdata[(combinedID / 256) + sharedStride*(combinedID % 256)] = inputs[inoutID];
+		if ((((threadIdx.x + blockIdx.x * blockDim.x)) / 64) % (1)+(((threadIdx.x + blockIdx.x * blockDim.x)) / 64) * (256) < 16384) {
+		inoutID = (1 * (threadIdx.y + 0) + (((threadIdx.x + blockIdx.x * blockDim.x)) / 64) % (1)+(((threadIdx.x + blockIdx.x * blockDim.x)) / 64) * (256));
+			inoutID = (((threadIdx.x + blockIdx.x * blockDim.x)) % (64)) + (inoutID) * 64;
+			temp_0=inputs[inoutID];
+		inoutID = (1 * (threadIdx.y + 32) + (((threadIdx.x + blockIdx.x * blockDim.x)) / 64) % (1)+(((threadIdx.x + blockIdx.x * blockDim.x)) / 64) * (256));
+			inoutID = (((threadIdx.x + blockIdx.x * blockDim.x)) % (64)) + (inoutID) * 64;
+			temp_1=inputs[inoutID];
+		inoutID = (1 * (threadIdx.y + 64) + (((threadIdx.x + blockIdx.x * blockDim.x)) / 64) % (1)+(((threadIdx.x + blockIdx.x * blockDim.x)) / 64) * (256));
+			inoutID = (((threadIdx.x + blockIdx.x * blockDim.x)) % (64)) + (inoutID) * 64;
+			temp_2=inputs[inoutID];
+		inoutID = (1 * (threadIdx.y + 96) + (((threadIdx.x + blockIdx.x * blockDim.x)) / 64) % (1)+(((threadIdx.x + blockIdx.x * blockDim.x)) / 64) * (256));
+			inoutID = (((threadIdx.x + blockIdx.x * blockDim.x)) % (64)) + (inoutID) * 64;
+			temp_3=inputs[inoutID];
+		inoutID = (1 * (threadIdx.y + 128) + (((threadIdx.x + blockIdx.x * blockDim.x)) / 64) % (1)+(((threadIdx.x + blockIdx.x * blockDim.x)) / 64) * (256));
+			inoutID = (((threadIdx.x + blockIdx.x * blockDim.x)) % (64)) + (inoutID) * 64;
+			temp_4=inputs[inoutID];
+		inoutID = (1 * (threadIdx.y + 160) + (((threadIdx.x + blockIdx.x * blockDim.x)) / 64) % (1)+(((threadIdx.x + blockIdx.x * blockDim.x)) / 64) * (256));
+			inoutID = (((threadIdx.x + blockIdx.x * blockDim.x)) % (64)) + (inoutID) * 64;
+			temp_5=inputs[inoutID];
+		inoutID = (1 * (threadIdx.y + 192) + (((threadIdx.x + blockIdx.x * blockDim.x)) / 64) % (1)+(((threadIdx.x + blockIdx.x * blockDim.x)) / 64) * (256));
+			inoutID = (((threadIdx.x + blockIdx.x * blockDim.x)) % (64)) + (inoutID) * 64;
+			temp_6=inputs[inoutID];
+		inoutID = (1 * (threadIdx.y + 224) + (((threadIdx.x + blockIdx.x * blockDim.x)) / 64) % (1)+(((threadIdx.x + blockIdx.x * blockDim.x)) / 64) * (256));
+			inoutID = (((threadIdx.x + blockIdx.x * blockDim.x)) % (64)) + (inoutID) * 64;
+			temp_7=inputs[inoutID];
 	}
-	__syncthreads();
-
-		if(threadIdx.x * 256 + (((blockIdx.x) % 1) * 256 + ((blockIdx.x) / 1) * 4096) < 16384) {
+		if ((((threadIdx.x + blockIdx.x * blockDim.x)) / 64) % (1)+(((threadIdx.x + blockIdx.x * blockDim.x)) / 64) * (256) < 16384) {
 		stageInvocationID = (threadIdx.y+ 0) % (1);
 		LUTId = stageInvocationID + 0;
-		temp_0 = sdata[sharedStride*(threadIdx.y+0)+threadIdx.x];
-		temp_1 = sdata[sharedStride*(threadIdx.y+32)+threadIdx.x];
-		temp_2 = sdata[sharedStride*(threadIdx.y+64)+threadIdx.x];
-		temp_3 = sdata[sharedStride*(threadIdx.y+96)+threadIdx.x];
-		temp_4 = sdata[sharedStride*(threadIdx.y+128)+threadIdx.x];
-		temp_5 = sdata[sharedStride*(threadIdx.y+160)+threadIdx.x];
-		temp_6 = sdata[sharedStride*(threadIdx.y+192)+threadIdx.x];
-		temp_7 = sdata[sharedStride*(threadIdx.y+224)+threadIdx.x];
 	w = twiddleLUT[LUTId];
 	loc_0.x = temp_4.x * w.x - temp_4.y * w.y;
 	loc_0.y = temp_4.y * w.x + temp_4.x * w.y;
@@ -193,7 +174,7 @@ float2* sdata = (float2*)shared;
 }		sharedStride = 16;
 	__syncthreads();
 
-		if(threadIdx.x * 256 + (((blockIdx.x) % 1) * 256 + ((blockIdx.x) / 1) * 4096) < 16384) {
+		if ((((threadIdx.x + blockIdx.x * blockDim.x)) / 64) % (1)+(((threadIdx.x + blockIdx.x * blockDim.x)) / 64) * (256) < 16384) {
 	stageInvocationID = threadIdx.y + 0;
 	blockInvocationID = stageInvocationID;
 	stageInvocationID = stageInvocationID % 1;
@@ -234,7 +215,7 @@ float2* sdata = (float2*)shared;
 	sdata[sdataID] = temp_7;
 }	__syncthreads();
 
-		if(threadIdx.x * 256 + (((blockIdx.x) % 1) * 256 + ((blockIdx.x) / 1) * 4096) < 16384) {
+		if ((((threadIdx.x + blockIdx.x * blockDim.x)) / 64) % (1)+(((threadIdx.x + blockIdx.x * blockDim.x)) / 64) * (256) < 16384) {
 		stageInvocationID = (threadIdx.y+ 0) % (8);
 		LUTId = stageInvocationID + 3;
 		temp_0 = sdata[sharedStride*(threadIdx.y+0)+threadIdx.x];
@@ -339,7 +320,7 @@ float2* sdata = (float2*)shared;
 	temp_6 = loc_0;
 }	__syncthreads();
 
-		if(threadIdx.x * 256 + (((blockIdx.x) % 1) * 256 + ((blockIdx.x) / 1) * 4096) < 16384) {
+		if ((((threadIdx.x + blockIdx.x * blockDim.x)) / 64) % (1)+(((threadIdx.x + blockIdx.x * blockDim.x)) / 64) * (256) < 16384) {
 	stageInvocationID = threadIdx.y + 0;
 	blockInvocationID = stageInvocationID;
 	stageInvocationID = stageInvocationID % 8;
@@ -380,7 +361,7 @@ float2* sdata = (float2*)shared;
 	sdata[sdataID] = temp_7;
 }	__syncthreads();
 
-		if(threadIdx.x * 256 + (((blockIdx.x) % 1) * 256 + ((blockIdx.x) / 1) * 4096) < 16384) {
+		if ((((threadIdx.x + blockIdx.x * blockDim.x)) / 64) % (1)+(((threadIdx.x + blockIdx.x * blockDim.x)) / 64) * (256) < 16384) {
 		stageInvocationID = (threadIdx.y+ 0) % (64);
 		LUTId = stageInvocationID + 27;
 		temp_0 = sdata[sharedStride*(threadIdx.y+0)+threadIdx.x];
@@ -455,88 +436,32 @@ float2* sdata = (float2*)shared;
 	loc_0 = temp_3;
 	temp_3 = temp_5;
 	temp_5 = loc_0;
-}	__syncthreads();
-
-		sharedStride = 17;
-		if(threadIdx.x * 256 + (((blockIdx.x) % 1) * 256 + ((blockIdx.x) / 1) * 4096) < 16384) {
-	stageInvocationID = threadIdx.y + 0;
-	blockInvocationID = stageInvocationID;
-	stageInvocationID = stageInvocationID % 64;
-	blockInvocationID = blockInvocationID - stageInvocationID;
-	inoutID = blockInvocationID * 4;
-	inoutID = inoutID + stageInvocationID;
-	sdataID = inoutID + 0;
-	sdataID = sharedStride * sdataID;
-	sdataID = sdataID + threadIdx.x;
-	sdata[sdataID] = temp_0;
-	sdataID = inoutID + 64;
-	sdataID = sharedStride * sdataID;
-	sdataID = sdataID + threadIdx.x;
-	sdata[sdataID] = temp_2;
-	sdataID = inoutID + 128;
-	sdataID = sharedStride * sdataID;
-	sdataID = sdataID + threadIdx.x;
-	sdata[sdataID] = temp_4;
-	sdataID = inoutID + 192;
-	sdataID = sharedStride * sdataID;
-	sdataID = sdataID + threadIdx.x;
-	sdata[sdataID] = temp_6;
-	stageInvocationID = threadIdx.y + 32;
-	blockInvocationID = stageInvocationID;
-	stageInvocationID = stageInvocationID % 64;
-	blockInvocationID = blockInvocationID - stageInvocationID;
-	inoutID = blockInvocationID * 4;
-	inoutID = inoutID + stageInvocationID;
-	sdataID = inoutID + 0;
-	sdataID = sharedStride * sdataID;
-	sdataID = sdataID + threadIdx.x;
-	sdata[sdataID] = temp_1;
-	sdataID = inoutID + 64;
-	sdataID = sharedStride * sdataID;
-	sdataID = sdataID + threadIdx.x;
-	sdata[sdataID] = temp_3;
-	sdataID = inoutID + 128;
-	sdataID = sharedStride * sdataID;
-	sdataID = sdataID + threadIdx.x;
-	sdata[sdataID] = temp_5;
-	sdataID = inoutID + 192;
-	sdataID = sharedStride * sdataID;
-	sdataID = sdataID + threadIdx.x;
-	sdata[sdataID] = temp_7;
-}	__syncthreads();
-
-		if (((threadIdx.x + 16 * threadIdx.y) % 16 + ((blockIdx.x) / 1)*16 < 64)){
-		combinedID = (threadIdx.x + 16 * threadIdx.y) + 0;
-		inoutID = combinedID % 16 + ((blockIdx.x) / 1)*16 + ((combinedID/16) * 64)+ ((blockIdx.x) % 1) * 64;
-			inoutID = (inoutID) * 1;
-			outputs[inoutID] = sdata[(combinedID % blockDim.x)+(combinedID/blockDim.x)*sharedStride];
-		combinedID = (threadIdx.x + 16 * threadIdx.y) + 512;
-		inoutID = combinedID % 16 + ((blockIdx.x) / 1)*16 + ((combinedID/16) * 64)+ ((blockIdx.x) % 1) * 64;
-			inoutID = (inoutID) * 1;
-			outputs[inoutID] = sdata[(combinedID % blockDim.x)+(combinedID/blockDim.x)*sharedStride];
-		combinedID = (threadIdx.x + 16 * threadIdx.y) + 1024;
-		inoutID = combinedID % 16 + ((blockIdx.x) / 1)*16 + ((combinedID/16) * 64)+ ((blockIdx.x) % 1) * 64;
-			inoutID = (inoutID) * 1;
-			outputs[inoutID] = sdata[(combinedID % blockDim.x)+(combinedID/blockDim.x)*sharedStride];
-		combinedID = (threadIdx.x + 16 * threadIdx.y) + 1536;
-		inoutID = combinedID % 16 + ((blockIdx.x) / 1)*16 + ((combinedID/16) * 64)+ ((blockIdx.x) % 1) * 64;
-			inoutID = (inoutID) * 1;
-			outputs[inoutID] = sdata[(combinedID % blockDim.x)+(combinedID/blockDim.x)*sharedStride];
-		combinedID = (threadIdx.x + 16 * threadIdx.y) + 2048;
-		inoutID = combinedID % 16 + ((blockIdx.x) / 1)*16 + ((combinedID/16) * 64)+ ((blockIdx.x) % 1) * 64;
-			inoutID = (inoutID) * 1;
-			outputs[inoutID] = sdata[(combinedID % blockDim.x)+(combinedID/blockDim.x)*sharedStride];
-		combinedID = (threadIdx.x + 16 * threadIdx.y) + 2560;
-		inoutID = combinedID % 16 + ((blockIdx.x) / 1)*16 + ((combinedID/16) * 64)+ ((blockIdx.x) % 1) * 64;
-			inoutID = (inoutID) * 1;
-			outputs[inoutID] = sdata[(combinedID % blockDim.x)+(combinedID/blockDim.x)*sharedStride];
-		combinedID = (threadIdx.x + 16 * threadIdx.y) + 3072;
-		inoutID = combinedID % 16 + ((blockIdx.x) / 1)*16 + ((combinedID/16) * 64)+ ((blockIdx.x) % 1) * 64;
-			inoutID = (inoutID) * 1;
-			outputs[inoutID] = sdata[(combinedID % blockDim.x)+(combinedID/blockDim.x)*sharedStride];
-		combinedID = (threadIdx.x + 16 * threadIdx.y) + 3584;
-		inoutID = combinedID % 16 + ((blockIdx.x) / 1)*16 + ((combinedID/16) * 64)+ ((blockIdx.x) % 1) * 64;
-			inoutID = (inoutID) * 1;
-			outputs[inoutID] = sdata[(combinedID % blockDim.x)+(combinedID/blockDim.x)*sharedStride];
+}		sharedStride = 16;
+		if ((((threadIdx.x + blockIdx.x * blockDim.x)) / 64) % (1)+(((threadIdx.x + blockIdx.x * blockDim.x)) / 64) * (256) < 16384) {
+}		if ((((threadIdx.x + blockIdx.x * blockDim.x)) / 64) % (1)+(((threadIdx.x + blockIdx.x * blockDim.x)) / 64) * (256) < 16384) {
+		inoutID = (threadIdx.y + 0) * (64) + ((((threadIdx.x + blockIdx.x * blockDim.x)) / 64) % (1)) * (64) + (((threadIdx.x + blockIdx.x * blockDim.x)) / 64);
+			inoutID = (((threadIdx.x + blockIdx.x * blockDim.x)) % (64)) * 1 + (inoutID) * 64;
+			outputs[inoutID] = temp_0;
+		inoutID = (threadIdx.y + 32) * (64) + ((((threadIdx.x + blockIdx.x * blockDim.x)) / 64) % (1)) * (64) + (((threadIdx.x + blockIdx.x * blockDim.x)) / 64);
+			inoutID = (((threadIdx.x + blockIdx.x * blockDim.x)) % (64)) * 1 + (inoutID) * 64;
+			outputs[inoutID] = temp_1;
+		inoutID = (threadIdx.y + 64) * (64) + ((((threadIdx.x + blockIdx.x * blockDim.x)) / 64) % (1)) * (64) + (((threadIdx.x + blockIdx.x * blockDim.x)) / 64);
+			inoutID = (((threadIdx.x + blockIdx.x * blockDim.x)) % (64)) * 1 + (inoutID) * 64;
+			outputs[inoutID] = temp_2;
+		inoutID = (threadIdx.y + 96) * (64) + ((((threadIdx.x + blockIdx.x * blockDim.x)) / 64) % (1)) * (64) + (((threadIdx.x + blockIdx.x * blockDim.x)) / 64);
+			inoutID = (((threadIdx.x + blockIdx.x * blockDim.x)) % (64)) * 1 + (inoutID) * 64;
+			outputs[inoutID] = temp_3;
+		inoutID = (threadIdx.y + 128) * (64) + ((((threadIdx.x + blockIdx.x * blockDim.x)) / 64) % (1)) * (64) + (((threadIdx.x + blockIdx.x * blockDim.x)) / 64);
+			inoutID = (((threadIdx.x + blockIdx.x * blockDim.x)) % (64)) * 1 + (inoutID) * 64;
+			outputs[inoutID] = temp_4;
+		inoutID = (threadIdx.y + 160) * (64) + ((((threadIdx.x + blockIdx.x * blockDim.x)) / 64) % (1)) * (64) + (((threadIdx.x + blockIdx.x * blockDim.x)) / 64);
+			inoutID = (((threadIdx.x + blockIdx.x * blockDim.x)) % (64)) * 1 + (inoutID) * 64;
+			outputs[inoutID] = temp_5;
+		inoutID = (threadIdx.y + 192) * (64) + ((((threadIdx.x + blockIdx.x * blockDim.x)) / 64) % (1)) * (64) + (((threadIdx.x + blockIdx.x * blockDim.x)) / 64);
+			inoutID = (((threadIdx.x + blockIdx.x * blockDim.x)) % (64)) * 1 + (inoutID) * 64;
+			outputs[inoutID] = temp_6;
+		inoutID = (threadIdx.y + 224) * (64) + ((((threadIdx.x + blockIdx.x * blockDim.x)) / 64) % (1)) * (64) + (((threadIdx.x + blockIdx.x * blockDim.x)) / 64);
+			inoutID = (((threadIdx.x + blockIdx.x * blockDim.x)) % (64)) * 1 + (inoutID) * 64;
+			outputs[inoutID] = temp_7;
 	}
 }
