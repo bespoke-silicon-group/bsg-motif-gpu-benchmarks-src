@@ -1,5 +1,5 @@
 BIN       ?= ./bin
-BINARIES  ?= graphit_apps ${BIN}/bs ${BIN}/fft ${BIN}/spgemm ${BIN}/sgemm ${BIN}/aes ${BIN}/bh ${BIN}/sw ${BIN}/dmr
+BINARIES  ?= graphit_apps ${BIN}/bs ${BIN}/fft ${BIN}/spgemm ${BIN}/sgemm ${BIN}/aes ${BIN}/bh ${BIN}/sw ${BIN}/dmr ${BIN}/ptr_chase ${BIN}/ptr_chase_single
 CUDA_PATH ?= /usr/local/cuda-11/
 NVCC      ?= ${CUDA_PATH}/bin/nvcc
 
@@ -63,8 +63,12 @@ ${BIN}/bs: | ./${BIN}
 
 ${BIN}/fft: | ./${BIN}
 	cd gpu-fft; \
-	$(MAKE); \
-	cp fft ../${BIN}/fft
+	$(MAKE) static FFT_SIZE=16384 FFT_DIM=64; \
+	$(MAKE) static FFT_SIZE=16384 FFT_DIM=320; \
+	$(MAKE) static FFT_SIZE=65536 FFT_DIM=64; \
+	cp fft_16384_64 ../${BIN}/fft_16384_64; \
+	cp fft_16384_320 ../${BIN}/fft_16384_320; \
+	cp fft_65536_64 ../${BIN}/fft_65536_64;
 	
 ${BIN}/spgemm: ${CUDA_PATH}/include/cusp | ./${BIN}
 	cd SpGEMM_cuda;\
@@ -111,6 +115,11 @@ ${BIN}/ptr_chase: | ./${BIN}
 	cd microbenchmarks; \
 	${NVCC} pointerchase.cu -cudart=shared -lcudart -o ptr_chase; \
 	cp ./ptr_chase ../${BIN}/ptr_chase
+
+${BIN}/ptr_chase_single: | ./${BIN}
+	cd microbenchmarks; \
+	${NVCC} pointerchase_single.cu -cudart=shared -lcudart -o ptr_chase_single; \
+	cp ./ptr_chase_single ../${BIN}/ptr_chase_single
 
 ${CUDA_PATH}/include/cusp: cusp/
 	cp -r ./cusp ${CUDA_PATH}/include/
