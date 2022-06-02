@@ -24679,7 +24679,7 @@ static inline VkFFTResult VkFFTPlanAxis(VkFFTApplication* app, VkFFTPlan* FFTPla
 		free(ptx);
 		ptx = 0;
 		printf("Recompiling\n");
-		std::ofstream outputCode2(std::string("coder") + "_" + std::to_string(axis_upload_id) + "_" + std::to_string(inverse) + ".cu");
+		std::ofstream outputCode2(std::string("coder") + "_" + std::to_string(axis_upload_id) + "_" + std::to_string(inverse) + "_" + std::to_string(axis->specializationConstants.size[1]) + "_" + std::to_string(axis->specializationConstants.size[0]) + ".cu");
 		outputCode2 << code0;
 		outputCode2.close();
 	#endif

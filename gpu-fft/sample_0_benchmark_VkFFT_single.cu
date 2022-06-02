@@ -19,6 +19,15 @@
 #include "utils_VkFFT.h"
 int kernelCount = 0;
 
+#ifndef FFT_SIZE
+#define FFT_SIZE 16384
+#endif
+
+#ifndef FFT_DIM
+#define FFT_DIM 64
+#endif
+
+
 VkFFTResult run_FFT_benchmark(VkGPU* vkGPU, uint64_t num, std::ofstream &out, int num_execs = 1, int useLUT = 1)
 {
 	VkFFTResult resFFT = VKFFT_SUCCESS;
@@ -100,8 +109,8 @@ VkFFTResult run_FFT_benchmark(VkGPU* vkGPU, uint64_t num, std::ofstream &out, in
 		return VKFFT_ERROR_FAILED_TO_SYNCHRONIZE;
 	
 	cudaMemcpy(buffer_output, buffer2, sizeof(float2) * num * num_execs, cudaMemcpyDeviceToHost);
-	for(int j = 0; j < num_execs; ++j) {
-		for(int i = 0; i < num; ++i)
+	for(int i = 0; i < num; ++i) {
+		for(int j = 0; j < num_execs; ++j)
 			out << "(" << buffer_output[i + j * num].x << "," << buffer_output[i + j * num].y << ") ";
 		out << "\n";
 	}
@@ -111,8 +120,8 @@ VkFFTResult run_FFT_benchmark(VkGPU* vkGPU, uint64_t num, std::ofstream &out, in
 }
 
 int main(int argc, char *argv[]) {
-	uint64_t num = 64;
-	int streams = 16384;
+	uint64_t num = FFT_DIM;
+	int streams = FFT_SIZE;
 	int useLUT = 1;
 	std::ofstream out("test.out");
 	if(argc >= 2)
