@@ -1,9 +1,9 @@
 BIN       ?= ./bin
-BINARIES  ?= graphit_apps ${BIN}/bs ${BIN}/fft ${BIN}/spgemm ${BIN}/sgemm ${BIN}/aes ${BIN}/bh ${BIN}/sw ${BIN}/dmr
+BINARIES  ?= graphit_apps ${BIN}/bs ${BIN}/fft ${BIN}/spgemm ${BIN}/spgemm_cusp ${BIN}/sgemm ${BIN}/aes ${BIN}/bh ${BIN}/sw ${BIN}/dmr
 CUDA_PATH ?= /usr/local/cuda-11/
 NVCC      ?= ${CUDA_PATH}/bin/nvcc
 
-.PHONY: all clean ${BINARIES}
+.PHONY: all clean ${BINARIES} ${BIN}/ptr_chase
 
 all: ${BINARIES} #Jacobi  HE
 
@@ -70,6 +70,11 @@ ${BIN}/spgemm: ${CUDA_PATH}/include/cusp | ./${BIN}
 	cd SpGEMM_cuda;\
 	$(MAKE); \
 	cp spgemm ../${BIN}/spgemm
+	
+${BIN}/spgemm_cusp: ${CUDA_PATH}/include/cusp | ./${BIN}
+	cd cusp_SpGEMM;\
+	$(MAKE); \
+	cp SpGEMM ../${BIN}/spgemm_cusp 
 	
 ${BIN}/sgemm: | ./${BIN}
 	cd cutlass; \
