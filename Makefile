@@ -63,11 +63,13 @@ ${BIN}/bs: | ./${BIN}
 
 ${BIN}/fft: | ./${BIN}
 	cd gpu-fft; \
-	$(MAKE) static FFT_SIZE=16384 FFT_DIM=64; \
-	$(MAKE) static FFT_SIZE=16384 FFT_DIM=320; \
-	$(MAKE) static FFT_SIZE=65536 FFT_DIM=64; \
+	$(MAKE) static FFT_SIZE=16384 NUM=64; \
+	$(MAKE) static FFT_SIZE=16384 NUM=320; \
+	$(MAKE) static FFT_SIZE=65536 NUM=64; \
+	$(MAKE) static FFT_SIZE=65536 NUM=320; \
 	cp fft_16384_64 ../${BIN}/fft_16384_64; \
 	cp fft_16384_320 ../${BIN}/fft_16384_320; \
+	cp fft_16384_320 ../${BIN}/fft_65536_320; \
 	cp fft_65536_64 ../${BIN}/fft_65536_64;
 	
 ${BIN}/spgemm: ${CUDA_PATH}/include/cusp | ./${BIN}
