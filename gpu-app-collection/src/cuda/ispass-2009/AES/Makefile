@@ -46,7 +46,8 @@ HDRDIR  	:=
 NEWLIBDIR  	:= 
 INCLUDES	:= -I$(BOOST_ROOT)/include -I. -I ../../common/inc
 CFLAGS 	:=   -O3 
-CUFLAGS	:= $(CFLAGS)
+CUFLAGS	:= $(CFLAGS) 
+CUDACCFLAGS :=  -cudart=shared
 LIBDIR=../../common/lib
 OMIT_CUTIL_LIB=0
 
