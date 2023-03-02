@@ -69,7 +69,7 @@ ${BIN}/fft: | ./${BIN}
 	$(MAKE) static FFT_SIZE=65536 NUM=320; \
 	cp fft_16384_64 ../${BIN}/fft_16384_64; \
 	cp fft_16384_320 ../${BIN}/fft_16384_320; \
-	cp fft_16384_320 ../${BIN}/fft_65536_320; \
+	cp fft_65536_320 ../${BIN}/fft_65536_320; \
 	cp fft_65536_64 ../${BIN}/fft_65536_64;
 	
 ${BIN}/spgemm: ${CUDA_PATH}/include/cusp | ./${BIN}
@@ -91,6 +91,11 @@ ${BIN}/sgemm_batch: | ./${BIN}
 	cd cutlass; \
 	${NVCC} batched_gemm.cu -I include/ -I tools/util/include/ -std=c++11 -cudart=shared -lcudart; \
 	cp a.out ../${BIN}/sgemm_batch;
+
+${BIN}/sgemm_batched: | ./${BIN}
+	cd cutlass; \
+	${NVCC} cutlass_batch.cu -I include/ -I tools/util/include/ -cudart=shared -lcudart; \
+	cp a.out ../${BIN}/sgemm_batched;
 
 ${BIN}/aes: | ./${BIN}
 	cd gpu-app-collection/src/cuda/ispass-2009/AES/; \
