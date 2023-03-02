@@ -129,6 +129,7 @@ ${BIN}/sw: | ./${BIN}
 
 ${BIN}/stencil: ./parboil/datasets | ./${BIN}
 	cd parboil; \
+	rm ./benchmarks/stencil/build/cuda_default/*; \
 	./parboil compile stencil cuda
 	cp ./parboil/benchmarks/stencil/build/cuda_default/stencil ${BIN}/stencil
 
